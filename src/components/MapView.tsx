@@ -20,9 +20,9 @@ import { type AllNeighborsConnection } from "@/hooks/useAllNeighbors";
 import { useQueryParams } from "@/hooks/useQueryParams";
 
 const DEFAULT = {
-  lat: 46.56, // Center between Seattle and Portland
-  lng: -122.51,
-  zoom: 7, // Zoom level to show both cities
+  lat: 45.02756 , // Center between Seattle and Portland
+  lng: 39.07356,
+  zoom: 12, // Zoom level to show both cities
 };
 
 interface MapQuery {
