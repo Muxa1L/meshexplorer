@@ -98,6 +98,7 @@ function SearchPageContent() {
                     className="w-full px-3 py-2 border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">All Regions</option>
+                    <option value="krasnodar">Krasnodar</option>
                     <option value="seattle">Seattle</option>
                     <option value="portland">Portland</option>
                     <option value="boston">Boston</option>

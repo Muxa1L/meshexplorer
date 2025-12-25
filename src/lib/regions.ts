@@ -6,6 +6,12 @@ export interface RegionConfig {
 }
 
 export const REGIONS: RegionConfig[] = [
+  { 
+    name: "krasnodar",
+    friendlyName: "Krasnodar",
+    broker: "tcp://meshcore:meshcore@192.168.1.20:1883",
+    topics: ["meshcore/krr"]
+  },
   {
     name: "seattle",
     friendlyName: "Seattle (PugetMesh, SalishMesh)",

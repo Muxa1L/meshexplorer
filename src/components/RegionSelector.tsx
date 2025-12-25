@@ -40,6 +40,7 @@ export default function RegionSelector({ onRegionSelected, className = "" }: Reg
                 "Broker: mqtt.davekeogh.com, Base topics: meshcore, meshcore/salish"}
               {name === "portland" && "Broker: mqtt.davekeogh.com, Base topic: meshcore/pdx"}
               {name === "boston" && "Broker: mqtt.davekeogh.com, Base topic: meshcore/bos"}
+              {name === "krasnodar" && "Broker: 192.168.1.20, Base topic: meshcore/krr"}
             </div>
           </button>
         ))}

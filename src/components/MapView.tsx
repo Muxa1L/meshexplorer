@@ -353,7 +353,7 @@ function NeighborLines({
             pathOptions={{
               color: lineColor,
               weight: isBidirectional ? 3 : 2,
-              opacity: 0.7,
+              opacity: 0.8,
               dashArray: isNeighborVisible ? undefined : '5, 5'
             }}
           />
@@ -464,7 +464,7 @@ function AllNeighborLines({
             pathOptions={{
               color: lineColor,
               weight: lineWeight,
-              opacity: 0.7,
+              opacity: 0.8,
             }}
           />
         );
@@ -782,6 +782,7 @@ export default function MapView({ target = '_self' }: MapViewProps = {}) {
           attribution={selectedTileLayer.attribution}
           url={selectedTileLayer.url}
           maxZoom={selectedTileLayer.maxZoom}
+          opacity={showAllNeighbors ? 0.3 : 1 }
           {...(selectedTileLayer.subdomains ? { subdomains: selectedTileLayer.subdomains } : {})}
         />
         {mapLayerSettings.showMeshcoreCoverageOverlay && (

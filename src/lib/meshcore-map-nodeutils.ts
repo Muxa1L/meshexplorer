@@ -22,21 +22,21 @@ export function getNameIconLabel(name: string): string {
 	if (name.length === 0) {
 		return ''
 	}
-
-	const match = name.match(/\p{Emoji_Presentation}/u);
-	if (!match) {
-		name = name.trim();
-		const segments = name.split(' ');
-		if (segments.length == 1) {
-			return name.charAt(0);
-		}
-		const firstSegment = segments.at(0);
-		const lastSegment = segments.at(-1);
-		if (firstSegment && lastSegment) {
-			return `${firstSegment[0]}${lastSegment[0]}`;
-		}
-		return '';
-	}
-
-	return match[0];
+	return name;
+//	const match = name.match(/\p{Emoji_Presentation}/u);
+//	if (!match) {
+//		name = name.trim();
+//		const segments = name.split(' ');
+//		if (segments.length == 1) {
+//			return name.charAt(0);
+//		}
+//		const firstSegment = segments.at(0);
+//		const lastSegment = segments.at(-1);
+//		if (firstSegment && lastSegment) {
+//			return `${firstSegment[0]}${lastSegment[0]}`;
+//		}
+//		return '';
+//	}
+//
+//	return match[0];
 }
