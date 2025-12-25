@@ -3,6 +3,27 @@ import { clickhouse } from "./clickhouse";
 import { generateRegionWhereClauseFromArray, generateRegionWhereClause, detectRegionFromBrokerTopic, detectRegion } from "@/lib/regionFilters";
 import { getRegionConfig } from "@/lib/regions";
 
+export interface WardriveSample{
+  lat: number  | null;
+  lon: number  | null;
+  path: string | null;
+  snr: number  | null; 
+  rssi: number  | null
+}
+
+export async function putSample( sample: WardriveSample ){
+// {"lat":45.07664680480957,"lon":39.04420852661133,"path":["d3"],"snr":14.5,"rssi":-29}
+  await clickhouse.insert({
+  table: 'wardrive_samples',
+  // structure should match the desired format, JSONEachRow in this example
+  values: [
+    sample
+  ],
+  format: 'JSONEachRow',
+  columns: [ 'lat', 'lon', 'path', 'snr', 'rssi']
+})
+}
+
 export async function getNodePositions({ minLat, maxLat, minLng, maxLng, nodeTypes, lastSeen }: { minLat?: string | null, maxLat?: string | null, minLng?: string | null, maxLng?: string | null, nodeTypes?: string[], lastSeen?: string | null } = {}) {
   try {
     let where = [
