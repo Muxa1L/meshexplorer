@@ -5,7 +5,10 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const sample: WardriveSample = body
-    sample.path = body.path.join('')
+    if (body.path){
+      sample.path = body.path.join('')
+    }
+    
     await putSample(body);
     return NextResponse.json({ 
         result: "ok"
