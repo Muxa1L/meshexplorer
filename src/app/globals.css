@@ -130,15 +130,19 @@ html {
 }
 
 .custom-node-marker {
-  width: 12px;
-  height: 12px;
+  width: 18px;
+  height: 18px;
   background: #2563eb; /* blue-600 */
-  border: 2px solid #fff;
   border-radius: 50%;
   box-shadow: 0 0 4px rgba(0,0,0,0.2);
-  display: block;
-  position: relative;
   z-index: 2;
+  justify-content: center;
+  font: 700 9px system-ui, sans-serif;
+  display: flex;
+  align-items: center;
+  position: relative;
+  box-shadow: 0 0 4px #0003;
+  color: #ffffff;
 }
 
 .custom-node-marker--green {
@@ -194,9 +198,9 @@ html {
 
 .custom-node-label {
   position: absolute;
-  top: 14px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 0;
+  left: 20px;
+  /* transform: translateX(-50%); */
   font-size: 11px;
   color: #222;
   background: rgba(255,255,255,0.85);

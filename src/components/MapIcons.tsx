@@ -46,7 +46,9 @@ export function NodeMarker({ node, showNodeNames = true, isSelected = false, isL
           {node.type === "meshcore" ? getNameIconLabel(node.name || node.short_name) : node.short_name}
         </div>
       )}
-      <div className={getMarkerClass()}></div>
+      <div className={getMarkerClass()}>
+        <span>{node.node_id.substring(0,2)}</span>
+      </div>
     </div>
   );
 }
