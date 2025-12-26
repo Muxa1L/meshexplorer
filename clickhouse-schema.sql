@@ -42,6 +42,10 @@ CREATE TABLE IF NOT EXISTS meshcore_packets (
     
     -- Origin Information
     origin_pubkey FixedString(32) COMMENT 'Public key of originating node (32 bytes)',
+
+    message_hash String,
+
+    origin String,
     
     -- Indexes
     INDEX idx_ingest_time ingest_timestamp TYPE minmax GRANULARITY 1,
@@ -109,42 +113,7 @@ ORDER BY (public_key, ingest_timestamp)
 TTL ingest_timestamp + INTERVAL 90 DAY
 SETTINGS index_granularity = 8192;
 
--- Table: meshcore_public_channel_messages
--- Stores encrypted messages from public channels
--- Messages remain encrypted for privacy but metadata is available
-CREATE TABLE IF NOT EXISTS meshcore_public_channel_messages (
-    -- Timestamps
-    ingest_timestamp DateTime64(3) DEFAULT now64(3) COMMENT 'When message was ingested',
-    mesh_timestamp DateTime64(3) COMMENT 'Timestamp from mesh network',
-    
-    -- Channel Information
-    channel_hash String COMMENT 'Hash of channel identifier',
-    
-    -- Message Data
-    mac String COMMENT 'Message authentication code (hex)',
-    encrypted_message String COMMENT 'Encrypted message content (hex)',
-    message_count UInt32 DEFAULT 0 COMMENT 'Message sequence number',
-    message_id String COMMENT 'Unique message identifier',
-    
-    -- Origin and Path Information
-    -- Array of tuples: [origin, origin_pubkey, path, broker, topic]
-    origin_path_info Array(Tuple(
-        origin String,
-        origin_pubkey String,
-        path String,
-        broker String,
-        topic String
-    )) COMMENT 'Array of origin and routing information tuples',
-    
-    -- Indexes
-    INDEX idx_ingest_time ingest_timestamp TYPE minmax GRANULARITY 1,
-    INDEX idx_channel_hash channel_hash TYPE bloom_filter GRANULARITY 1,
-    INDEX idx_message_id message_id TYPE bloom_filter GRANULARITY 1
-) ENGINE = MergeTree()
-PARTITION BY toYYYYMM(ingest_timestamp)
-ORDER BY (channel_hash, ingest_timestamp)
-TTL ingest_timestamp + INTERVAL 90 DAY
-SETTINGS index_granularity = 8192;
+
 
 -- ============================================================================
 -- MATERIALIZED VIEWS
@@ -232,6 +201,24 @@ LIFETIME(MIN 60 MAX 300);
 -- HELPER VIEWS
 -- ============================================================================
 
+CREATE VIEW IF NOT EXISTS meshcore_public_channel_messages AS
+SELECT
+	message_hash as message_id,
+	MIN (ingest_timestamp) as ingest_timestamp,
+	MIN (mesh_timestamp) as mesh_timestamp,
+	MIN(hex(payload)) as payload,
+	substring(payload, 1, 2) as channel_hash,
+	substring(payload, 3, 4) as mac,
+	unhex(substring(payload, 7)) as encrypted_message,
+	count(*) AS message_count,
+	groupArray(tuple(origin, hex(origin_pubkey), hex(path), broker, topic)) as origin_path_info
+FROM
+	meshcore_packets
+WHERE
+	payload_type = 5
+GROUP BY
+	message_hash ;
+
 -- View: node_neighbor_relationships
 -- Extracts direct neighbor relationships from adverts
 -- Useful for network topology analysis
@@ -298,7 +285,6 @@ ORDER BY message_count DESC;
 -- Add table comments for documentation
 ALTER TABLE meshcore_packets MODIFY COMMENT 'Raw packet data from MQTT brokers with routing and payload information';
 ALTER TABLE meshcore_adverts MODIFY COMMENT 'Parsed node advertisements with location, capabilities, and routing data';
-ALTER TABLE meshcore_public_channel_messages MODIFY COMMENT 'Encrypted messages from public mesh channels with metadata';
 
 -- ============================================================================
 -- SAMPLE QUERIES
