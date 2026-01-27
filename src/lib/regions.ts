@@ -9,7 +9,7 @@ export const REGIONS: RegionConfig[] = [
   { 
     name: "krasnodar",
     friendlyName: "Krasnodar",
-    broker: "tcp://meshcore:meshcore@192.168.1.20:1883",
+    broker: "tcp://192.168.1.20:1883",
     topics: ["meshcore/krr"]
   },
   {
