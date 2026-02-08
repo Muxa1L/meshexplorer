@@ -66,7 +66,7 @@ export async function getNodePositions({ minLat, maxLat, minLng, maxLng, nodeTyp
       return null;
     }
     
-    const query = `SELECT node_id, name, short_name, latitude, longitude, last_seen, first_seen, type FROM unified_latest_nodeinfo WHERE ${where.join(" AND ")}`;
+    const query = `SELECT node_id, name, short_name, latitude, longitude, last_seen, first_seen, type, broker, topic FROM unified_latest_nodeinfo WHERE ${where.join(" AND ")}`;
     const resultSet = await clickhouse.query({ query, query_params: params, format: 'JSONEachRow' });
     const rows = await resultSet.json();
     return rows as Array<{
