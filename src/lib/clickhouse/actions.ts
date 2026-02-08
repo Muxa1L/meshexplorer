@@ -60,7 +60,7 @@ export async function getNodePositions({ minLat, maxLat, minLng, maxLng, nodeTyp
       const regionFilter = getRegionConfig(region!);
       where.push(`broker = {broker:String} AND topic = {topic:String}`);
       params.broker = regionFilter?.broker;
-      params.topic = regionFilter?.topics;
+      params.topic = regionFilter?.topics[0];
     }
     else {
       return null;
