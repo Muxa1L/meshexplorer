@@ -12,6 +12,12 @@ export const REGIONS: RegionConfig[] = [
     broker: "tcp://192.168.1.20:11883",
     topics: ["meshcore/krr"]
   },
+  { 
+    name: "krasnodar_pub",
+    friendlyName: "Krasnodar PUB",
+    broker: "tcp://192.168.1.20:11883",
+    topics: ["meshcore/krr_pb"]
+  },
   {
     name: "seattle",
     friendlyName: "Seattle (PugetMesh, SalishMesh)",
