@@ -57,10 +57,10 @@ export async function getNodePositions({ minLat, maxLat, minLng, maxLng, nodeTyp
       params.lastSeen = Number(lastSeen);
     }
     if (region !== null){
-      const regionFilter = generateRegionWhereClauseFromArray(region);
-      if (regionFilter.whereClause) {
-        where.push(regionFilter.whereClause);
-      }
+      const regionFilter = getRegionConfig(region!);
+      where.push(`broker = {broker:String} AND topic = {topic:String}`);
+      params.broker = regionFilter?.broker;
+      params.topic = regionFilter?.topics;
     }
     else {
       return null;
