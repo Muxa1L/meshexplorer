@@ -24,7 +24,8 @@ export async function putSample( sample: WardriveSample ){
 })
 }
 
-export async function getNodePositions({ minLat, maxLat, minLng, maxLng, nodeTypes, lastSeen, region }: { minLat?: string | null, maxLat?: string | null, minLng?: string | null, maxLng?: string | null, nodeTypes?: string[], lastSeen?: string | null, region?: string } = {}) {
+export async function getNodePositions({ minLat, maxLat, minLng, maxLng, nodeTypes, lastSeen, region }: { minLat?: string | null, maxLat?: string | null, minLng?: string | null, maxLng?: string | null, nodeTypes?: string[], lastSeen?: string | null, region?: string | null
+ } = {}) {
   try {
     let where = [
       "latitude IS NOT NULL",
@@ -55,10 +56,16 @@ export async function getNodePositions({ minLat, maxLat, minLng, maxLng, nodeTyp
       where.push(`last_seen >= now() - INTERVAL {lastSeen:UInt32} SECOND`);
       params.lastSeen = Number(lastSeen);
     }
-    const regionFilter = generateRegionWhereClauseFromArray(region);
-    if (regionFilter.whereClause) {
-      where.push(regionFilter.whereClause);
+    if (region !== null){
+      const regionFilter = generateRegionWhereClauseFromArray(region);
+      if (regionFilter.whereClause) {
+        where.push(regionFilter.whereClause);
+      }
     }
+    else {
+      return null;
+    }
+    
     const query = `SELECT node_id, name, short_name, latitude, longitude, last_seen, first_seen, type FROM unified_latest_nodeinfo WHERE ${where.join(" AND ")}`;
     const resultSet = await clickhouse.query({ query, query_params: params, format: 'JSONEachRow' });
     const rows = await resultSet.json();
