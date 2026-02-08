@@ -13,7 +13,7 @@ export async function GET(req: Request) {
     const region = searchParams.get("region");
     const includeNeighbors = searchParams.get("includeNeighbors") === "true";
     
-    const positions = await getNodePositions({ minLat, maxLat, minLng, maxLng, nodeTypes, lastSeen });
+    const positions = await getNodePositions({ minLat, maxLat, minLng, maxLng, nodeTypes, lastSeen, region });
     
     if (includeNeighbors) {
       const neighbors = await getAllNodeNeighbors(lastSeen, minLat, maxLat, minLng, maxLng, nodeTypes, region || undefined);
