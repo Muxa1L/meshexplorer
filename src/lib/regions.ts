@@ -1,3 +1,5 @@
+import { clickhouse } from "./clickhouse/clickhouse";
+
 export interface RegionConfig {
   name: string;
   friendlyName: string;
@@ -18,24 +20,6 @@ export const REGIONS: RegionConfig[] = [
     broker: "tcp://192.168.1.20:11883",
     topics: ["meshcore/krr_pb"]
   },
-  {
-    name: "seattle",
-    friendlyName: "Seattle (PugetMesh, SalishMesh)",
-    broker: "tcp://mqtt.davekeogh.com:1883",
-    topics: ["meshcore", "meshcore/salish"]
-  },
-  {
-    name: "portland",
-    friendlyName: "Portland",
-    broker: "tcp://mqtt.davekeogh.com:1883",
-    topics: ["meshcore/pdx"]
-  },
-  {
-    name: "boston",
-    friendlyName: "Boston",
-    broker: "tcp://mqtt.davekeogh.com:1883",
-    topics: ["meshcore/bos"]
-  }
 ];
 
 export function getRegionConfig(regionName: string): RegionConfig | undefined {
