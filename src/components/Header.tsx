@@ -36,8 +36,8 @@ export default function Header({ configButtonRef }: HeaderProps) {
       { href: "/stats", label: "Stats" },
       { href: "/search", label: "Search" },
       { href: "/api-docs", label: "API Docs" },
-      { href: "/wardrive", label: "Wardrive" },
-      { href: "/coverage", label: "Coverage" },
+      { href: "/wardrive/", label: "Wardrive" },
+      { href: "/coverage/", label: "Coverage" },
     ];
     if (!navRef.current || !itemsRef.current) return;
 
