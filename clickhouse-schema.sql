@@ -123,8 +123,8 @@ SETTINGS index_granularity = 8192;
 -- Maintains the latest state for each node
 -- Optimized for quick lookups of current node status
 CREATE MATERIALIZED VIEW IF NOT EXISTS meshcore_adverts_latest
-ENGINE = ReplacingMergeTree(ingest_timestamp)
 REFRESH EVERY 1 MINUTE
+ENGINE = MergeTree
 ORDER BY public_key
 POPULATE
 AS SELECT
@@ -150,8 +150,8 @@ GROUP BY public_key;
 -- Unified view of latest node information with standardized fields
 -- Used by the map view and general node queries
 CREATE MATERIALIZED VIEW IF NOT EXISTS unified_latest_nodeinfo
-ENGINE = ReplacingMergeTree(last_seen)
 REFRESH EVERY 1 MINUTE
+ENGINE = ReplacingMergeTree(last_seen)
 ORDER BY node_id
 POPULATE
 AS SELECT
@@ -257,17 +257,15 @@ ORDER BY last_seen DESC;
 -- View: channel_activity_stats
 -- Aggregate statistics for chat channels
 -- Useful for monitoring popular channels
-CREATE VIEW IF NOT EXISTS channel_activity_stats AS
+CREATE VIEW IF NOT EXISTS channel_activity_stats AS 
 SELECT
     channel_hash,
-    count() as message_count,
-    count(DISTINCT arrayJoin(origin_path_info).origin_pubkey) as unique_senders,
-    min(ingest_timestamp) as first_message,
-    max(ingest_timestamp) as last_message,
-    arrayJoin(arrayDistinct(arrayFlatten(
-        arrayMap(x -> [x.broker, x.topic], origin_path_info)
-    ))) as regions
-FROM meshcore_public_channel_messages
+    count() AS message_count,
+    countDistinct(origin_path_info) AS unique_senders,
+    min(ingest_timestamp) AS first_message,
+    max(ingest_timestamp) AS last_message,
+    countDistinct(origin_path_info) AS regions
+FROM default.meshcore_public_channel_messages
 GROUP BY channel_hash
 ORDER BY message_count DESC;
 
