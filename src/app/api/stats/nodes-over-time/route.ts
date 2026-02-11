@@ -38,6 +38,7 @@ export async function GET(req: Request) {
         count(DISTINCT CASE WHEN is_repeater = 1 THEN public_key END) AS repeaters,
         count(DISTINCT CASE WHEN is_room_server = 1 THEN public_key END) AS room_servers
       FROM rolling_window
+      WHERE day BETWEEN (now() - INTERVAL 7 DAY) AND now()
       GROUP BY day
       ORDER BY day ASC
     `;
