@@ -8,12 +8,12 @@ export interface RegionConfig {
 }
 
 export const REGIONS: RegionConfig[] = [
-  { 
-    name: "krasnodar",
-    friendlyName: "Testing",
-    broker: "tcp://192.168.1.20:11883",
-    topics: ["meshcore/krr"]
-  },
+  // { 
+  //   name: "krasnodar",
+  //   friendlyName: "Testing",
+  //   broker: "tcp://192.168.1.20:11883",
+  //   topics: ["meshcore/krr"]
+  // },
   { 
     name: "krasnodar_pub",
     friendlyName: "Krasnodar",
