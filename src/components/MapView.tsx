@@ -18,6 +18,7 @@ import { NodePosition } from "@/types/map";
 import { useNeighbors, type Neighbor } from "@/hooks/useNeighbors";
 import { type AllNeighborsConnection } from "@/hooks/useAllNeighbors";
 import { useQueryParams } from "@/hooks/useQueryParams";
+import WardriveCoverageLayer from "@/components/WardriveCoverageLayer";
 
 const DEFAULT = {
   lat: 45.02756 , // Center between Seattle and Portland
@@ -498,6 +499,8 @@ export default function MapView({ target = '_self' }: MapViewProps = {}) {
     nodeTypes: ["meshcore"],
     showMeshcoreCoverageOverlay: false,
     minPacketCount: 1,
+    showWardriveOverlay: false,
+    wardriveResolution: 7,
   });
   
   // Use query params to persist map position
@@ -795,6 +798,11 @@ export default function MapView({ target = '_self' }: MapViewProps = {}) {
             maxNativeZoom={8}
             zIndex={1000}
             opacity={0.7}
+          />
+        )}
+        {mapLayerSettings.showWardriveOverlay && (
+          <WardriveCoverageLayer
+            precision={mapLayerSettings.wardriveResolution}
           />
         )}
         {mapLayerSettings.showNodes && (

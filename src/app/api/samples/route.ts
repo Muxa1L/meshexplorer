@@ -55,9 +55,9 @@ function aggregateSamples(samples: any[]) {
   const now = new Date().toISOString();
   samples.forEach(sample => {
     const lat = sample.latitude || sample.lat;
-    const lng = sample.longitude || sample.lng;
+    const lng = sample.longitude || sample.lon;
     if (!lat || !lng) return;
-    const hash = encodeGeohash(lat, lng, 7);
+    const hash = encodeGeohash(lat, lng, 10);
     if (!coverage[hash]) {
       coverage[hash] = {
         hash,
@@ -77,8 +77,8 @@ function aggregateSamples(samples: any[]) {
     }
     if (success) {
       coverage[hash].received += 1;
-      if (sample.nodeId && sample.nodeId !== 'Unknown') {
-        const nodeId = sample.nodeId;
+      if (sample.path && sample.path !== 'Unknown') {
+        const nodeId = sample.path;
         const sampleTime = new Date(sample.timestamp || now).getTime();
         if (!coverage[hash].repeaters[nodeId] || new Date(coverage[hash].repeaters[nodeId].lastSeen).getTime() < sampleTime) {
           coverage[hash].repeaters[nodeId] = {
@@ -118,7 +118,7 @@ function computeSampleId(sample: any) {
 export async function GET(req: Request) {
   // optional precision query param for geohash resolution
   const url = new URL(req.url);
-  const precis = parseInt(url.searchParams.get('precision') || '7', 10) || 7;
+  const precis = parseInt(url.searchParams.get('precision') || '10', 10) || 10;
   // fetch persisted coverage from ClickHouse at requested resolution
   const rows = await getWardriveCoverage(precis);
   // convert array to object by hash for compatibility

@@ -214,17 +214,43 @@ export default function MapLayerSettingsComponent({ onSettingsChange }: MapLayer
             </select>
           </div>
 
-          {/* Show meshcore coverage overlay
-          <label className="flex items-center gap-2 mb-3 cursor-pointer">
+          {/* Show wardrive coverage overlay */}
+          <label className="flex items-center gap-2 mb-1 cursor-pointer">
             <input
               type="checkbox"
-              checked={settings.showMeshcoreCoverageOverlay}
-              onChange={(e) => updateSetting('showMeshcoreCoverageOverlay', e.target.checked)}
+              checked={settings.showWardriveOverlay}
+              onChange={(e) => updateSetting('showWardriveOverlay', e.target.checked)}
               className="rounded"
             />
-            <span className="text-sm text-gray-700 dark:text-gray-300">Show meshcore coverage overlay</span>
+            <span className="text-sm text-gray-700 dark:text-gray-300">Show wardrive coverage</span>
           </label>
-          */}
+
+          {/* Resolution sub-option */}
+          <div className="ml-6 mb-3">
+            <label className={`block text-sm mb-1 ${
+              settings.showWardriveOverlay
+                ? 'text-gray-700 dark:text-gray-300'
+                : 'text-gray-400 dark:text-gray-500'
+            }`}>
+              Resolution (geohash precision)
+            </label>
+            <select
+              value={settings.wardriveResolution}
+              onChange={(e) => updateSetting('wardriveResolution', parseInt(e.target.value, 10))}
+              disabled={!settings.showWardriveOverlay}
+              className={`w-full p-2 border border-gray-300 dark:border-neutral-600 rounded text-sm ${
+                settings.showWardriveOverlay
+                  ? 'bg-white dark:bg-neutral-800 text-gray-700 dark:text-gray-300'
+                  : 'bg-gray-100 dark:bg-neutral-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              {[5, 6, 7, 8, 9].map((p) => (
+                <option key={p} value={p}>
+                  {p} – {p <= 5 ? 'very coarse' : p <= 6 ? 'coarse' : p <= 7 ? 'medium' : p <= 8 ? 'fine' : 'very fine'}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       )}
     </div>
