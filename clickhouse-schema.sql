@@ -46,6 +46,16 @@ CREATE TABLE IF NOT EXISTS wardrive_seen (
 ORDER BY id
 TTL seen_at + toIntervalSecond(expiration);
 
+CREATE TABLE IF NOT EXISTS wardrive_samples_mesh (
+    ingest_timestamp DateTime DEFAULT now(),
+    lat              Float64,
+    lon              Float64,
+    path             String COMMENT 'First repeater 2-char hex prefix'
+) ENGINE = MergeTree()
+PARTITION BY toYYYYMM(ingest_timestamp)
+ORDER BY (ingest_timestamp, path)
+TTL ingest_timestamp + INTERVAL 90 DAY;
+
 -- DDL for meshcore_status table
 -- Stores node status information from MQTT /status subtopic
 
