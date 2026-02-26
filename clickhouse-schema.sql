@@ -14,6 +14,39 @@ USE meshexplorer;
 -- MAIN TABLES
 -- ============================================================================
 
+-- Wardrive-specific tables for coverage and samples
+CREATE TABLE IF NOT EXISTS wardrive_coverage (
+    hash String,
+    received Float64,
+    lost Float64,
+    samples UInt32,
+    repeaters String, -- JSON object containing repeater details
+    lastUpdate DateTime,
+    appVersion String
+) ENGINE = MergeTree()
+ORDER BY hash
+TTL toDateTime(lastUpdate) + INTERVAL 90 DAY;
+
+CREATE TABLE IF NOT EXISTS wardrive_samples (
+    lat Float64,
+    lon Float64,
+    path String,
+    snr Float64,
+    rssi Float64,
+    ingest_timestamp DateTime DEFAULT now()
+) ENGINE = MergeTree()
+ORDER BY ingest_timestamp
+TTL ingest_timestamp + INTERVAL 90 DAY;
+
+CREATE TABLE IF NOT EXISTS wardrive_seen (
+    id String,
+    seen_at DateTime DEFAULT now(),
+    expiration UInt32 -- seconds
+) ENGINE = MergeTree()
+ORDER BY id
+TTL seen_at + toIntervalSecond(expiration);
+
+
 -- Table: meshcore_packets
 -- Stores raw packet data from MQTT brokers
 -- This is the most granular table containing all packet information

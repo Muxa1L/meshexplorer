@@ -11,6 +11,16 @@ export interface WardriveSample{
   rssi: number  | null
 }
 
+export interface WardriveCoverageCell {
+  hash: string;
+  received: number;
+  lost: number;
+  samples: number;
+  repeaters: Record<string, { name: string; rssi: number | null; snr: number | null; lastSeen: string }>;
+  lastUpdate: string;
+  appVersion: string;
+}
+
 export async function putSample( sample: WardriveSample ){
 // {"lat":45.07664680480957,"lon":39.04420852661133,"path":["d3"],"snr":14.5,"rssi":-29}
   await clickhouse.insert({
@@ -22,6 +32,88 @@ export async function putSample( sample: WardriveSample ){
   format: 'JSONEachRow',
   columns: [ 'lat', 'lon', 'path', 'snr', 'rssi']
 })
+}
+
+/**
+ * Retrieve all coverage cells stored in ClickHouse
+ */
+export async function getWardriveCoverage(precision: number = 7): Promise<WardriveCoverageCell[]> {
+  // support aggregating at lower resolution by truncating geohash
+  let query: string;
+  if (precision && precision !== 7) {
+    query = `
+      SELECT
+        substring(hash,1,${precision}) AS hash,
+        sum(received) AS received,
+        sum(lost) AS lost,
+        sum(samples) AS samples,
+        any(repeaters) AS repeaters,
+        max(lastUpdate) AS lastUpdate,
+        any(appVersion) AS appVersion
+      FROM wardrive_coverage
+      GROUP BY hash
+    `;
+  } else {
+    query = `
+      SELECT hash, received, lost, samples, repeaters, lastUpdate, appVersion
+      FROM wardrive_coverage
+    `;
+  }
+  try {
+    const rs = await clickhouse.query({ query, format: 'JSONEachRow' });
+    const rows = await rs.json();
+    return rows as WardriveCoverageCell[];
+  } catch (err) {
+    console.error('Error querying wardrive_coverage', err);
+    return [];
+  }
+}
+
+/**
+ * Upsert coverage cells into ClickHouse. Uses INSERT; collisions will overwrite
+ * existing rows by hash using `ON CONFLICT` pattern or replacing value column
+ * depending on table engine. For simplicity we perform a REPLACE query assuming
+ * MergeTree with primary key hash.
+ */
+export async function upsertWardriveCoverage(cells: Record<string, WardriveCoverageCell>) {
+  const values = Object.values(cells).map(c => ({
+    hash: c.hash,
+    received: c.received,
+    lost: c.lost,
+    samples: c.samples,
+    repeaters: JSON.stringify(c.repeaters),
+    lastUpdate: Math.floor(new Date(c.lastUpdate).getTime() / 1000),
+    appVersion: c.appVersion
+  }));
+  if (values.length === 0) return;
+  await clickhouse.insert({
+    table: 'wardrive_coverage',
+    values,
+    format: 'JSONEachRow',
+    columns: ['hash','received','lost','samples','repeaters','lastUpdate','appVersion']
+  });
+}
+
+// ---------------------------------------------------
+// wardrive_seen helpers
+// ---------------------------------------------------
+export async function hasSeenId(id: string): Promise<boolean> {
+  const query = `
+    SELECT count() AS cnt FROM wardrive_seen WHERE id = {id:String}
+  `;
+  const rs = await clickhouse.query({ query, query_params: { id }, format: 'JSONEachRow' });
+  const rows = await rs.json() as Array<{ cnt: number }>;
+  return rows.length > 0 && rows[0].cnt > 0;
+}
+
+export async function markSeenId(id: string, ttlSeconds: number = 60 * 60 * 24 * 90) {
+  // insert with TTL if using MergeTree with TTL
+  await clickhouse.insert({
+    table: 'wardrive_seen',
+    values: [{ id, seen_at: Math.floor(Date.now() / 1000), expiration: ttlSeconds }],
+    format: 'JSONEachRow',
+    columns: ['id','seen_at','expiration']
+  });
 }
 
 export async function getNodePositions({ minLat, maxLat, minLng, maxLng, nodeTypes, lastSeen, region }: { minLat?: string | null, maxLat?: string | null, minLng?: string | null, maxLng?: string | null, nodeTypes?: string[], lastSeen?: string | null, region?: string | null

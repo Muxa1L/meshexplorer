@@ -136,6 +136,79 @@ For faster builds with caching, enable BuildKit:
 DOCKER_BUILDKIT=1 docker-compose up --build
 ```
 
+## Wardrive Support 🚗
+
+This project now includes a wardrive map and backend APIs ported from the [meshwar-map](https://github.com/mintylinux/meshwar-map) repository.
+
+### Frontend
+
+- A new **Wardrive** page is available at `/wardrive` (or via the header). It displays coverage generated from wardrive samples, allowing you to visualize radio reception quality on a map.
+- **Settings panel** in the map lets you:
+  - toggle day/night basemap
+  - choose **resolution** (geohash precision 5–9) which will fetch lower/higher-resolution coverage cells from the API
+- The map is powered by Leaflet and dynamically loads data from the `/api/samples` endpoint (supports `?precision=` query parameter).
+- When `NEXT_PUBLIC_API_URL` is set, the wardrive map will load data from the remote API instead of the local one.
+
+### Backend APIs
+
+The following API routes are provided by the Next.js application:
+
+| Method | Path             | Description |
+|--------|------------------|-------------|
+| GET    | `/api/samples`   | Retrieve aggregated coverage cells. |
+| POST   | `/api/samples`   | Upload an array of wardrive samples (deduplicated server-side). |
+| DELETE | `/api/samples`   | Truncate wardrive coverage/seen data (useful for clearing dev data). |
+
+Additionally, `/api/wardrive/put-sample` accepts individual samples for raw storage.
+
+API responses include appropriate CORS headers to allow cross-origin clients.
+
+### Persistence & ClickHouse Schema
+
+Wardrive data is now persisted in ClickHouse. Three new tables are required:
+
+```sql
+CREATE TABLE IF NOT EXISTS wardrive_coverage (
+    hash String,
+    received Float64,
+    lost Float64,
+    samples UInt32,
+    repeaters String,
+    lastUpdate DateTime,
+    appVersion String
+) ENGINE = MergeTree()
+ORDER BY hash
+TTL toDateTime(lastUpdate) + INTERVAL 90 DAY;
+
+CREATE TABLE IF NOT EXISTS wardrive_samples (
+    lat Float64,
+    lon Float64,
+    path String,
+    snr Float64,
+    rssi Float64,
+    ingest_timestamp DateTime DEFAULT now()
+) ENGINE = MergeTree()
+ORDER BY ingest_timestamp
+TTL ingest_timestamp + INTERVAL 90 DAY;
+
+CREATE TABLE IF NOT EXISTS wardrive_seen (
+    id String,
+    seen_at DateTime DEFAULT now(),
+    expiration UInt32
+) ENGINE = MergeTree()
+ORDER BY id
+TTL seen_at + toIntervalSecond(expiration);
+```
+
+These statements are already included at the top of `clickhouse-schema.sql`; run that file against your ClickHouse server before using the wardrive APIs.
+
+The `wardrive_seen` table is used for deduplication. The API will insert an ID for each sample and skip processing if it has been seen before. Truncating `/api/samples` clears both the coverage and seen tables.
+
+### Notes
+
+- The wardrive endpoints do not currently require authentication; you may want to add headers or tokens in production.
+- The frontend map caches data until the browser reloads; you can force a refresh by navigating away and back to the page.
+
 ## Deploy
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
