@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -127,6 +129,11 @@ html {
   html {
     background-color: var(--color-neutral-800);
   }
+}
+
+/* Dark mode map tiles: invert + hue-rotate to get a dark map without affecting markers/popups */
+.dark .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg);
 }
 
 .custom-node-marker {
