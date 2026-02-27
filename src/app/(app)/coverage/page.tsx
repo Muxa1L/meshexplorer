@@ -210,6 +210,14 @@ export default function CoveragePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showRepeaters]);
 
+  // ─── Reload when precision changes (skip on first mount) ─────────────────
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; return; }
+    if (leafletRef.current) loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [precision]);
+
   // ─── Render ──────────────────────────────────────────────────────────────
   const COVERAGE_LEGEND = [
     { color: "#4ade80", label: "≥80% received" },
@@ -329,7 +337,7 @@ export default function CoveragePage() {
               <option value={7}>7 — ~5 m²</option>
               <option value={8}>8 — ~1 m²</option>
             </select>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Tile size — refresh to apply.</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Tile size — reloads automatically.</p>
           </div>
 
           {/* Layer toggles */}

@@ -40,25 +40,19 @@ export async function putSample( sample: WardriveSample ){
 export async function getWardriveCoverage(precision: number = 10): Promise<WardriveCoverageCell[]> {
   // support aggregating at lower resolution by truncating geohash
   let query: string;
-  if (precision && precision !== 10) {
-    query = `
-      SELECT
-        substring(hash,1,${precision}) AS hash,
-        sum(received) AS received,
-        sum(lost) AS lost,
-        sum(samples) AS samples,
-        any(repeaters) AS repeaters,
-        max(lastUpdate) AS lastUpdate,
-        any(appVersion) AS appVersion
-      FROM wardrive_coverage
-      GROUP BY hash
-    `;
-  } else {
-    query = `
-      SELECT hash, received, lost, samples, repeaters, lastUpdate, appVersion
-      FROM wardrive_coverage
-    `;
-  }
+  query = `
+    SELECT
+      geohashEncode(lon, lat, ${precision}) hash,
+      count(1) received,
+      0 lost,
+      count(1) samples,
+      groupArray(repeater) repeaters,
+      max(ingest_timestamp)lastUpdate
+    FROM
+      wardrive_samples_mesh
+    GROUP BY
+      hash
+  `;  
   try {
     const rs = await clickhouse.query({ query, format: 'JSONEachRow' });
     const rows = await rs.json();
