@@ -49,6 +49,7 @@ export default function Header({ configButtonRef }: HeaderProps) {
     // Define all navigation items
     const allNavItems: NavItem[] = [
       { href: "/messages", label: "Messages" },
+      { href: "/packets", label: "Packets" },
       { href: "/stats", label: "Stats" },
       { href: "/search", label: "Search" },
       { href: "/api-docs", label: "API Docs" },
