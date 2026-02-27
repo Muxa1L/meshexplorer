@@ -11,7 +11,7 @@
  * CONTROL are either plaintext or use shared-key encryption.
  */
 
-// @ts-ignore — JS-only package, types declared in src/types/meshcore.d.ts
+// @ts-expect-error — JS-only package, types declared in src/types/meshcore.d.ts
 import { Packet, Advert } from "@liamcottle/meshcore.js";
 
 // ---------------------------------------------------------------------------
