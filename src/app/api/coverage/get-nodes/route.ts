@@ -21,6 +21,7 @@ export async function GET(request: Request) {
           WHERE is_repeater = 1
             AND latitude  IS NOT NULL
             AND longitude IS NOT NULL
+            ${days > 0 ? `AND last_seen >= now() - INTERVAL ${days} DAY` : ""}
           ORDER BY last_seen DESC
         `,
         format: "JSONEachRow",
