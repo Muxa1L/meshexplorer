@@ -34,7 +34,8 @@ export async function putSample( sample: WardriveSample ){
 /**
  * Retrieve all coverage cells stored in ClickHouse
  */
-export async function getWardriveCoverage(precision: number = 10): Promise<WardriveCoverageCell[]> {
+export async function getWardriveCoverage(precision: number = 10, days: number = 7): Promise<WardriveCoverageCell[]> {
+  const timeWhere = days > 0 ? `WHERE ingest_timestamp >= now() - INTERVAL ${days} DAY` : '';
   // support aggregating at lower resolution by truncating geohash
   let query: string;
   query = `
@@ -54,6 +55,7 @@ export async function getWardriveCoverage(precision: number = 10): Promise<Wardr
         max(ingest_timestamp)lastUpdate
       FROM
         wardrive_samples_mesh wsm
+      ${timeWhere}
       GROUP BY
         hash) wsm
     FULL JOIN (
@@ -62,6 +64,7 @@ export async function getWardriveCoverage(precision: number = 10): Promise<Wardr
         count(1) web_received
       FROM
         wardrive_samples_web
+      ${timeWhere}
       GROUP BY
         hash) wsw ON
       wsm.hash = wsw.hash

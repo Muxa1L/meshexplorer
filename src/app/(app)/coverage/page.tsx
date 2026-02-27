@@ -63,6 +63,7 @@ export default function CoveragePage() {
   const [showCoverage, setShowCoverage] = useState(true);
   const [showRepeaters, setShowRepeaters] = useState(true);
   const [precision, setPrecision] = useState(6);
+  const [days, setDays] = useState(7);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const leafletRef = useRef<any>(null);
@@ -178,7 +179,7 @@ export default function CoveragePage() {
   async function loadData() {
     setLoading(true);
     try {
-      const resp = await fetch(`/api/coverage/get-nodes?precision=${precision}`);
+      const resp = await fetch(`/api/coverage/get-nodes?precision=${precision}&days=${days}`);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const { coverage, repeaters } = (await resp.json()) as {
         coverage: CoverageTile[];
@@ -282,7 +283,7 @@ export default function CoveragePage() {
     if (isFirstRender.current) { isFirstRender.current = false; return; }
     if (leafletRef.current) loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [precision]);
+  }, [precision, days]);
 
   // ─── Render ──────────────────────────────────────────────────────────────
   const COVERAGE_LEGEND = [
@@ -404,6 +405,24 @@ export default function CoveragePage() {
               <option value={8}>8 — ±19 m</option>
             </select>
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Tile size — reloads automatically.</p>
+          </div>
+
+          {/* Date range */}
+          <div className="p-4 border-b border-gray-200 dark:border-neutral-700">
+            <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Date Range</h2>
+            <select
+              value={days}
+              onChange={(e) => setDays(Number(e.target.value))}
+              className="w-full text-xs rounded border border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-800 text-gray-700 dark:text-gray-300 px-2 py-1.5"
+            >
+              <option value={1}>Last 1 day</option>
+              <option value={3}>Last 3 days</option>
+              <option value={7}>Last 7 days</option>
+              <option value={14}>Last 14 days</option>
+              <option value={30}>Last 30 days</option>
+              <option value={90}>Last 90 days</option>
+              <option value={0}>All time</option>
+            </select>
           </div>
 
           {/* Layer toggles */}

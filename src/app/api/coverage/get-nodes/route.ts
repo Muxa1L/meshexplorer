@@ -5,9 +5,10 @@ import { clickhouse } from "@/lib/clickhouse/clickhouse";
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const precision = Math.min(8, Math.max(1, parseInt(searchParams.get("precision") ?? "6", 10)));
+  const days = Math.max(0, parseInt(searchParams.get("days") ?? "7", 10));
   try {
     const [coverageRows, repeatersRs] = await Promise.all([
-      getWardriveCoverage(precision),
+      getWardriveCoverage(precision, days),
       clickhouse.query({
         query: `
           SELECT
