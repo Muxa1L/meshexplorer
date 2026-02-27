@@ -1,7 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
 import {
-  coverageKey,
   geohashDecodeBbox,
   geohashDecodeCenter,
   haversineKm,
@@ -65,6 +64,7 @@ export default function WardrivePage() {
   const [lastSampleText, setLastSampleText] = useState("None yet");
 
   const [pingMode, setPingMode] = useState<"fill" | "interval">("fill");
+  const [fillPrecision, setFillPrecision] = useState(6);
   const [intervalVal, setIntervalVal] = useState("0.5");
   const [minDistVal, setMinDistVal] = useState("0.5");
   const [running, setRunning] = useState(false);
@@ -89,6 +89,7 @@ export default function WardrivePage() {
   const lastPosUpdateRef = useRef<number>(0);
   const runningRef = useRef(false);
   const pingModeRef = useRef<"fill" | "interval">("fill");
+  const fillPrecisionRef = useRef(6);
   const intervalValRef = useRef("0.5");
   const minDistValRef = useRef("0.5");
   const ignoredIdRef = useRef<string | null>(null);
@@ -96,6 +97,7 @@ export default function WardrivePage() {
   // keep refs in sync
   useEffect(() => { runningRef.current = running; }, [running]);
   useEffect(() => { pingModeRef.current = pingMode; }, [pingMode]);
+  useEffect(() => { fillPrecisionRef.current = fillPrecision; }, [fillPrecision]);
   useEffect(() => { intervalValRef.current = intervalVal; }, [intervalVal]);
   useEffect(() => { minDistValRef.current = minDistVal; }, [minDistVal]);
   useEffect(() => { ignoredIdRef.current = ignoredId; }, [ignoredId]);
@@ -206,10 +208,10 @@ export default function WardrivePage() {
 
   async function refreshCoverageData() {
     try {
-      const resp = await fetch("/api/wardrive/get-coverage");
+      const resp = await fetch(`/api/wardrive/get-coverage?precision=${fillPrecisionRef.current}`);
       if (!resp.ok) return;
       const tiles: string[] = await resp.json();
-      tiles.forEach((t) => coveredTilesRef.current.add(t));
+      coveredTilesRef.current = new Set(tiles);
       redrawCoverage();
     } catch (e) {
       console.error("Coverage fetch failed", e);
@@ -233,7 +235,7 @@ export default function WardrivePage() {
         mapRef.current.panTo([lat, lon]);
       }
 
-      const tile = coverageKey(lat, lon);
+      const tile = sampleKey(lat, lon).substring(0, fillPrecisionRef.current);
       setCurrentTile(tile);
       setTileNeedsPing(!coveredTilesRef.current.has(tile));
     } catch (e) {
@@ -316,7 +318,7 @@ export default function WardrivePage() {
     if (rawLat === 0 && rawLon === 0) { setStatusMsg("No GPS fix yet", "text-amber-600"); return; }
 
     const sid = sampleKey(rawLat, rawLon);
-    const coverageTileId = sid.substring(0, 6);
+    const coverageTileId = sid.substring(0, fillPrecisionRef.current);
     const [lat, lon] = geohashDecodeCenter(sid);
     let distanceKmValue: number | null = null;
 
@@ -650,6 +652,30 @@ export default function WardrivePage() {
                   <option value="interval">Interval</option>
                 </select>
               </div>
+
+              {pingMode === "fill" && (
+                <div>
+                  <label className="text-xs text-gray-600 dark:text-gray-400">Tile Precision</label>
+                  <select
+                    value={fillPrecision}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      setFillPrecision(v);
+                      fillPrecisionRef.current = v;
+                      coveredTilesRef.current = new Set();
+                      redrawCoverage();
+                      if (running) stopAutoPing();
+                    }}
+                    className="mt-1 w-full text-xs bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded px-2 py-1 text-gray-900 dark:text-gray-100"
+                  >
+                    <option value={4}>4 — ~40 km cells</option>
+                    <option value={5}>5 — ~1.5 km cells</option>
+                    <option value={6}>6 — ~120 m cells</option>
+                    <option value={7}>7 — ~5 m cells</option>
+                    <option value={8}>8 — ~1 m cells</option>
+                  </select>
+                </div>
+              )}
 
               {pingMode === "interval" && (
                 <>
