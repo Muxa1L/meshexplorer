@@ -668,11 +668,11 @@ export default function WardrivePage() {
                     }}
                     className="mt-1 w-full text-xs bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded px-2 py-1 text-gray-900 dark:text-gray-100"
                   >
-                    <option value={4}>4 — ~40 km cells</option>
-                    <option value={5}>5 — ~1.5 km cells</option>
-                    <option value={6}>6 — ~120 m cells</option>
-                    <option value={7}>7 — ~5 m cells</option>
-                    <option value={8}>8 — ~1 m cells</option>
+                    <option value={4}>4 — ±20 km</option>
+                    <option value={5}>5 — ±2.4 km</option>
+                    <option value={6}>6 — ±610 m</option>
+                    <option value={7}>7 — ±76 m</option>
+                    <option value={8}>8 — ±19 m</option>
                   </select>
                 </div>
               )}

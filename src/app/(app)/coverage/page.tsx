@@ -397,11 +397,11 @@ export default function CoveragePage() {
               onChange={(e) => setPrecision(Number(e.target.value))}
               className="w-full text-xs rounded border border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-800 text-gray-700 dark:text-gray-300 px-2 py-1.5"
             >
-              <option value={4}>4 — ~40 km²</option>
-              <option value={5}>5 — ~1.5 km²</option>
-              <option value={6}>6 — ~120 m²</option>
-              <option value={7}>7 — ~5 m²</option>
-              <option value={8}>8 — ~1 m²</option>
+              <option value={4}>4 — ±20 km</option>
+              <option value={5}>5 — ±2.4 km</option>
+              <option value={6}>6 — ±610 m</option>
+              <option value={7}>7 — ±76 m</option>
+              <option value={8}>8 — ±19 m</option>
             </select>
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Tile size — reloads automatically.</p>
           </div>
