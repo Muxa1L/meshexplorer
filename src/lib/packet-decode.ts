@@ -271,6 +271,48 @@ export function decodePacket(rawPacketHex: string): DecodedPayload {
 }
 
 // ---------------------------------------------------------------------------
+// Group key — stable string + human label for grouping packets in the UI
+// ---------------------------------------------------------------------------
+
+export function packetGroupKey(decoded: DecodedPayload): { key: string; label: string } {
+  switch (decoded.type) {
+    case "ADVERT": {
+      const id = decoded.name || decoded.pub_key.slice(0, 8);
+      return {
+        key: `advert:${decoded.pub_key},${decoded.timestamp}`,
+        label: decoded.name ? `${decoded.name} (${decoded.role})` : `${id}… (${decoded.role})`,
+      };
+    }
+    case "ACK":
+      return { key: `ack:${decoded.checksum}`, label: `ACK ${decoded.checksum}` };
+    case "REQ":
+      return { key: `req:${decoded.encrypted}`, label: `REQ ${decoded.src_hash} → ${decoded.dest_hash}` };
+    case "RESPONSE":
+      return { key: `resp:${decoded.encrypted}`, label: `RESPONSE ${decoded.src_hash} → ${decoded.dest_hash}` };
+    case "TXT_MSG": {
+      // canonical order so A→B and B→A share the same group
+      const [a, b] = [decoded.dest_hash, decoded.src_hash].sort();
+      return { key: `txt:${decoded.encrypted}`, label: `TXT_MSG ${decoded.src_hash} ↔ ${decoded.dest_hash}` };
+    }
+    case "GRP_TXT":
+      return { key: `grptxt:${decoded.mac}`, label: `GRP_TXT ch:${decoded.mac}` };
+    case "GRP_DATA":
+      return { key: `grpdata:${decoded.channel_hash}`, label: `GRP_DATA ch:${decoded.channel_hash}` };
+    case "ANON_REQ":
+      return { key: `anon:${decoded.encrypted}`, label: `ANON_REQ → ${decoded.dest_hash}` };
+    case "PATH":
+      return { key: `path:${decoded.encrypted}`, label: `PATH ${decoded.src_hash} → ${decoded.dest_hash}` };
+    case "TRACE":
+      return {
+        key: `trace:${decoded.tag}`,
+        label: `TRACE 0x${decoded.tag.toString(16).toUpperCase().padStart(8, "0")}`,
+      };
+    default:
+      return { key: decoded.type, label: decoded.type };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Short preview string for the list row
 // ---------------------------------------------------------------------------
 

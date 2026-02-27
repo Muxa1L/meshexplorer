@@ -8,9 +8,13 @@ import {
   ClipboardDocumentIcon,
   ArrowRightIcon,
   ArrowPathIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  RectangleGroupIcon,
 } from "@heroicons/react/24/outline";
 import {
   decodePacket,
+  packetGroupKey,
   payloadPreview,
   type DecodedPayload,
 } from "@/lib/packet-decode";
@@ -35,6 +39,13 @@ interface MeshPacket {
   origin_pubkey: string;
   message_hash: string;
   origin: string;
+}
+
+interface PacketGroup {
+  key: string;
+  label: string;
+  packets: MeshPacket[];
+  ptInfo: { name: string; color: string };
 }
 
 // ---------------------------------------------------------------------------
@@ -329,6 +340,33 @@ function PathChain({ path }: { path: string }) {
 }
 
 // ---------------------------------------------------------------------------
+// GroupHeader — collapsible section header for grouped mode
+// ---------------------------------------------------------------------------
+
+function GroupHeader({ group, collapsed, onToggle }: {
+  group: PacketGroup; collapsed: boolean; onToggle: () => void;
+}) {
+  const Chevron = collapsed ? ChevronRightIcon : ChevronDownIcon;
+  return (
+    <div
+      onClick={onToggle}
+      className="flex items-center gap-2 px-3 py-1.5 cursor-pointer bg-gray-50 dark:bg-neutral-800 border-b border-gray-200 dark:border-neutral-700 hover:bg-gray-100 dark:hover:bg-neutral-750 select-none sticky top-0 z-10"
+    >
+      <Chevron className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+      <span className={`flex-shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium text-white ${group.ptInfo.color}`}>
+        {group.ptInfo.name}
+      </span>
+      <span className="text-xs font-medium text-gray-700 dark:text-gray-300 font-mono truncate flex-1">
+        {group.label}
+      </span>
+      <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0 tabular-nums">
+        {group.packets.length}
+      </span>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // PacketDetail panel
 // ---------------------------------------------------------------------------
 
@@ -458,10 +496,20 @@ function PacketDetail({ packet, onClose }: { packet: MeshPacket; onClose: () => 
 // ---------------------------------------------------------------------------
 
 export default function PacketAnalyzer() {
-  const [selectedPacket, setSelectedPacket] = useState<MeshPacket | null>(null);
-  const [filterType, setFilterType]         = useState<number | null>(null);
-  const [autoRefresh, setAutoRefresh]       = useState(true);
-  const [limit]                             = useState(1000);
+  const [selectedPacket, setSelectedPacket]   = useState<MeshPacket | null>(null);
+  const [filterType, setFilterType]           = useState<number | null>(null);
+  const [autoRefresh, setAutoRefresh]         = useState(true);
+  const [groupMode, setGroupMode]             = useState(false);
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [limit]                               = useState(1000);
+
+  const toggleGroup = useCallback((key: string) => {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }, []);
 
   const { data, isLoading, error, refetch, isFetching } = useQuery({
     queryKey: ["packets", limit],
@@ -492,6 +540,22 @@ export default function PacketAnalyzer() {
     () => Array.from(new Set(packets.map(p => p.payload_type))).sort((a, b) => a - b),
     [packets],
   );
+
+  const groups = useMemo<PacketGroup[]>(() => {
+    const groupMap = new Map<string, PacketGroup>();
+    const order: string[] = [];
+    for (const packet of filteredPackets) {
+      let decoded: DecodedPayload;
+      try { decoded = decodePacket(packet.packet); } catch { decoded = { type: "UNKNOWN", data: "" }; }
+      const { key, label } = packetGroupKey(decoded);
+      if (!groupMap.has(key)) {
+        groupMap.set(key, { key, label, packets: [], ptInfo: getPayloadType(packet.payload_type) });
+        order.push(key);
+      }
+      groupMap.get(key)!.packets.push(packet);
+    }
+    return order.map(k => groupMap.get(k)!);
+  }, [filteredPackets]);
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-neutral-900">
@@ -527,6 +591,18 @@ export default function PacketAnalyzer() {
           })}
         </div>
         <div className="flex items-center gap-2 ml-auto flex-shrink-0">
+          <button
+            onClick={() => { setGroupMode(m => !m); setCollapsedGroups(new Set()); }}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+              groupMode
+                ? "bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300"
+                : "bg-gray-100 dark:bg-neutral-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-neutral-700"
+            }`}
+            title="Toggle grouping"
+          >
+            <RectangleGroupIcon className="w-3.5 h-3.5" />
+            {groupMode ? `${groups.length} groups` : "Group"}
+          </button>
           <button
             onClick={() => setAutoRefresh(r => !r)}
             className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
@@ -566,6 +642,24 @@ export default function PacketAnalyzer() {
               <div className="flex items-center justify-center h-24 text-sm text-red-500 dark:text-red-400">Failed to load packets</div>
             ) : filteredPackets.length === 0 ? (
               <div className="flex items-center justify-center h-24 text-sm text-gray-500 dark:text-gray-400">No packets found</div>
+            ) : groupMode ? (
+              groups.map(group => (
+                <div key={group.key}>
+                  <GroupHeader
+                    group={group}
+                    collapsed={collapsedGroups.has(group.key)}
+                    onToggle={() => toggleGroup(group.key)}
+                  />
+                  {!collapsedGroups.has(group.key) && group.packets.map((p, idx) => (
+                    <PacketRow
+                      key={`${p.ingest_timestamp}-${p.message_hash || idx}`}
+                      packet={p}
+                      isSelected={selectedPacket === p}
+                      onClick={() => setSelectedPacket(prev => prev === p ? null : p)}
+                    />
+                  ))}
+                </div>
+              ))
             ) : (
               filteredPackets.map((p, idx) => (
                 <PacketRow
