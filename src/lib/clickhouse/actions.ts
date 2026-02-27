@@ -6,9 +6,6 @@ import { getRegionConfig } from "@/lib/regions";
 export interface WardriveSample{
   lat: number  | null;
   lon: number  | null;
-  path: string | null;
-  snr: number  | null; 
-  rssi: number  | null
 }
 
 export interface WardriveCoverageCell {
@@ -24,13 +21,13 @@ export interface WardriveCoverageCell {
 export async function putSample( sample: WardriveSample ){
 // {"lat":45.07664680480957,"lon":39.04420852661133,"path":["d3"],"snr":14.5,"rssi":-29}
   await clickhouse.insert({
-  table: 'wardrive_samples',
+  table: 'wardrive_samples_web',
   // structure should match the desired format, JSONEachRow in this example
   values: [
     sample
   ],
   format: 'JSONEachRow',
-  columns: [ 'lat', 'lon', 'path', 'snr', 'rssi']
+  columns: [ 'lat', 'lon']
 })
 }
 
@@ -42,16 +39,34 @@ export async function getWardriveCoverage(precision: number = 10): Promise<Wardr
   let query: string;
   query = `
     SELECT
-      geohashEncode(lon, lat, ${precision}) hash,
-      count(1) received,
-      0 lost,
-      count(1) samples,
-      groupArray(distinct repeater) repeaters,
-      max(ingest_timestamp)lastUpdate
+      coalesce(wsm.hash, wsw.hash) hash,
+      mesh_received received,
+      mesh_received + web_received samples,
+      samples-received lost,
+      repeaters,
+      lastUpdate
     FROM
-      wardrive_samples_mesh
-    GROUP BY
-      hash
+      (
+      SELECT
+        geohashEncode(lon, lat, ${precision}) hash,
+        count(1) mesh_received,
+        groupArray(distinct repeater) repeaters,
+        max(ingest_timestamp)lastUpdate
+      FROM
+        wardrive_samples_mesh wsm
+      GROUP BY
+        hash) wsm
+    FULL JOIN (
+      SELECT
+        geohashEncode(lon, lat, ${precision}) hash,
+        count(1) web_received
+      FROM
+        wardrive_samples_web
+      GROUP BY
+        hash) wsw ON
+      wsm.hash = wsw.hash
+    ORDER BY
+      lastUpdate DESC
   `;  
   try {
     const rs = await clickhouse.query({ query, format: 'JSONEachRow' });

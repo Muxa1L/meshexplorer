@@ -4,11 +4,7 @@ import { getNodePositions, getAllNodeNeighbors, putSample, WardriveSample } from
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const sample: WardriveSample = body
-    if (body.path){
-      sample.path = body.path.join('')
-    }
-    
+    const sample: WardriveSample = body    
     await putSample(body);
     return NextResponse.json({ 
         result: "ok"
