@@ -80,7 +80,7 @@ export default function WardriveMap({ dataUrl = defaultDataUrl }: WardriveMapPro
       const L = (mod && (mod as any).default) || mod;
 
       map = L.map(containerRef.current!, {
-        center: [45.0355, 38.9756],
+        center: [45.0467, 38.996],
         zoom: 10,
         maxBounds: [[-90, -180], [90, 180]],
         maxBoundsViscosity: 1.0,

@@ -69,8 +69,11 @@ export default function CoveragePage() {
   const mapRef = useRef<any>(null);
   const coverageLayerRef = useRef<any>(null);
   const repeaterLayerRef = useRef<any>(null);
+  const hoverLayerRef = useRef<any>(null);
   const coverageDataRef = useRef<CoverageTile[]>([]);
   const repeaterDataRef = useRef<Repeater[]>([]);
+  const repeaterPosRef = useRef<Map<string, [number, number]>>(new Map());
+  const repeaterToTilesRef = useRef<Map<string, CoverageTile[]>>(new Map());
 
   // ─── Layer render helpers ────────────────────────────────────────────────
   function renderCoverage(tiles: CoverageTile[], show: boolean) {
@@ -80,6 +83,11 @@ export default function CoveragePage() {
     if (!show) return;
     tiles.forEach((tile) => {
       const [minLat, minLon, maxLat, maxLon] = geohashDecodeBbox(tile.hash);
+      const tileLat = (minLat + maxLat) / 2;
+      const tileLon = (minLon + maxLon) / 2;
+      const ids: string[] = Array.isArray(tile.repeaters)
+        ? (tile.repeaters as unknown as string[])
+        : Object.keys(tile.repeaters ?? {});
       const color = tileColor(tile.received, tile.lost);
       const rect = L.rectangle([[minLat, minLon], [maxLat, maxLon]], {
         color,
@@ -89,14 +97,32 @@ export default function CoveragePage() {
       });
       const total = tile.received + tile.lost;
       const pct = total > 0 ? Math.round((tile.received / total) * 100) : 0;
-      const rptIds = Object.values(tile.repeaters ?? {}).join(", ") || "—";
       rect.bindPopup(
         `<b>${tile.hash}</b><br>` +
         `Received: ${tile.received}/${total} (${pct}%)<br>` +
         `Lost: ${tile.lost} &nbsp; Samples: ${tile.samples}<br>` +
-        `Repeaters: ${rptIds}<br>` +
+        `Repeaters: ${ids.join(", ") || "—"}<br>` +
         `Updated: ${parseDate(tile.lastUpdate).toLocaleString()}`
       );
+      rect.on("mouseover", () => {
+        const hl = hoverLayerRef.current;
+        if (!L || !hl) return;
+        hl.clearLayers();
+        L.rectangle([[minLat, minLon], [maxLat, maxLon]], {
+          color: "#f59e0b", weight: 3, fill: false, interactive: false,
+        }).addTo(hl);
+        ids.forEach((id) => {
+          const pos = repeaterPosRef.current.get(id);
+          if (!pos) return;
+          L.polyline([[pos[0], pos[1]], [tileLat, tileLon]], {
+            color: "#3b82f6", weight: 2, opacity: 0.9, interactive: false,
+          }).addTo(hl);
+          L.circleMarker(pos, {
+            radius: 12, color: "#f59e0b", weight: 3, fillColor: "#f59e0b", fillOpacity: 0.3, interactive: false,
+          }).addTo(hl);
+        });
+      });
+      rect.on("mouseout", () => hoverLayerRef.current?.clearLayers());
       coverageLayerRef.current.addLayer(rect);
     });
   }
@@ -109,18 +135,41 @@ export default function CoveragePage() {
     rptrs.forEach((rptr) => {
       if (!rptr.lat || !rptr.lon) return;
       const color = repeaterColor(rptr.last_seen);
-      const marker = L.circleMarker([rptr.lat, rptr.lon], {
-        radius: 8,
-        weight: 2,
-        color,
-        fillColor: color,
-        fillOpacity: 0.85,
+      const sz = 20;
+      const marker = L.marker([rptr.lat, rptr.lon], {
+        icon: L.divIcon({
+          html: `<div style="width:${sz}px;height:${sz}px;border-radius:50%;background:${color};border:2px solid rgba(255,255,255,0.5);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;box-sizing:border-box;font-family:monospace;">${rptr.id}</div>`,
+          className: "",
+          iconSize: [sz, sz],
+          iconAnchor: [sz / 2, sz / 2],
+          popupAnchor: [0, -sz / 2],
+        }),
       });
       marker.bindPopup(
         `<b>${rptr.name || rptr.id}</b><br>` +
         `ID: <code>${rptr.id}</code><br>` +
         `Last seen: ${formatAge(rptr.last_seen)}`
       );
+      marker.on("mouseover", () => {
+        const hl = hoverLayerRef.current;
+        if (!L || !hl) return;
+        hl.clearLayers();
+        L.circleMarker([rptr.lat, rptr.lon], {
+          radius: 14, color: "#f59e0b", weight: 3, fillColor: "#f59e0b", fillOpacity: 0.3, interactive: false,
+        }).addTo(hl);
+        (repeaterToTilesRef.current.get(rptr.id) ?? []).forEach((tile) => {
+          const [minLat, minLon, maxLat, maxLon] = geohashDecodeBbox(tile.hash);
+          const tileLat = (minLat + maxLat) / 2;
+          const tileLon = (minLon + maxLon) / 2;
+          L.polyline([[rptr.lat, rptr.lon], [tileLat, tileLon]], {
+            color: "#3b82f6", weight: 2, opacity: 0.9, interactive: false,
+          }).addTo(hl);
+          L.rectangle([[minLat, minLon], [maxLat, maxLon]], {
+            color: "#f59e0b", weight: 2, fill: false, interactive: false,
+          }).addTo(hl);
+        });
+      });
+      marker.on("mouseout", () => hoverLayerRef.current?.clearLayers());
       repeaterLayerRef.current.addLayer(marker);
     });
   }
@@ -137,6 +186,21 @@ export default function CoveragePage() {
       };
       coverageDataRef.current = coverage;
       repeaterDataRef.current = repeaters;
+      // Build hover lookup maps
+      const posMap = new Map<string, [number, number]>();
+      repeaters.forEach((r) => { if (r.lat && r.lon) posMap.set(r.id, [r.lat, r.lon]); });
+      repeaterPosRef.current = posMap;
+      const tileMap = new Map<string, CoverageTile[]>();
+      coverage.forEach((tile) => {
+        const rIds: string[] = Array.isArray(tile.repeaters)
+          ? (tile.repeaters as unknown as string[])
+          : Object.keys(tile.repeaters ?? {});
+        rIds.forEach((id) => {
+          if (!tileMap.has(id)) tileMap.set(id, []);
+          tileMap.get(id)!.push(tile);
+        });
+      });
+      repeaterToTilesRef.current = tileMap;
       setTileCount(coverage.length);
       setRepeaterCount(repeaters.length);
       renderCoverage(coverage, showCoverage);
@@ -182,6 +246,7 @@ export default function CoveragePage() {
 
       coverageLayerRef.current = L.layerGroup().addTo(map);
       repeaterLayerRef.current = L.layerGroup().addTo(map);
+      hoverLayerRef.current = L.layerGroup().addTo(map);
 
       if (isMounted) await loadData();
     })();
@@ -194,6 +259,7 @@ export default function CoveragePage() {
         leafletRef.current = null;
         coverageLayerRef.current = null;
         repeaterLayerRef.current = null;
+        hoverLayerRef.current = null;
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
