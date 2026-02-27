@@ -40,7 +40,7 @@ export async function getWardriveCoverage(precision: number = 10, days: number =
   let query: string;
   query = `
     SELECT
-      coalesce(wsm.hash, wsw.hash) hash,
+      if (wsm.hash != '', wsm.hash ,wsw.hash) hash,
       mesh_received received,
       mesh_received + web_received samples,
       samples-received lost,
