@@ -4,7 +4,7 @@ import {
   coverageKey,
   geohashDecodeBbox,
   geohashDecodeCenter,
-  haversineMiles,
+  haversineKm,
   sampleKey,
 } from "@/lib/wardrive/geohash";
 
@@ -23,7 +23,7 @@ interface LogEntry {
   lat: number;
   lon: number;
   mode: string;
-  distanceMiles: number | null;
+  distanceKm: number | null;
   skipped?: boolean;
   sentToMesh: boolean;
   sentToService: boolean;
@@ -318,17 +318,17 @@ export default function WardrivePage() {
     const sid = sampleKey(rawLat, rawLon);
     const coverageTileId = sid.substring(0, 6);
     const [lat, lon] = geohashDecodeCenter(sid);
-    let distanceMilesValue: number | null = null;
+    let distanceKmValue: number | null = null;
 
     if (pingModeRef.current === "interval") {
-      const minMiles = parseFloat(minDistValRef.current || "0.5");
-      if (auto && lastSampleRef.current && minMiles > 0) {
-        distanceMilesValue = haversineMiles(
+      const minKm = parseFloat(minDistValRef.current || "0.5");
+      if (auto && lastSampleRef.current && minKm > 0) {
+        distanceKmValue = haversineKm(
           [lastSampleRef.current.lat, lastSampleRef.current.lon], [lat, lon]
         );
-        if (distanceMilesValue < minMiles) {
+        if (distanceKmValue < minKm) {
           setStatusMsg("Skipped (min dist)", "text-amber-600");
-          addLogEntry({ timestamp: new Date().toISOString(), lat, lon, mode: "auto", distanceMiles: distanceMilesValue, skipped: true, sentToMesh: false, sentToService: false, notes: "" });
+          addLogEntry({ timestamp: new Date().toISOString(), lat, lon, mode: "auto", distanceKm: distanceKmValue, skipped: true, sentToMesh: false, sentToService: false, notes: "" });
           return;
         }
       }
@@ -378,7 +378,7 @@ export default function WardrivePage() {
       setStatusMsg(auto ? "Auto ping sent" : "Ping sent ✓", "text-emerald-600");
     }
 
-    addLogEntry({ timestamp: new Date().toISOString(), lat, lon, mode: auto ? "auto" : "manual", distanceMiles: distanceMilesValue, sentToMesh, sentToService, notes });
+    addLogEntry({ timestamp: new Date().toISOString(), lat, lon, mode: auto ? "auto" : "manual", distanceKm: distanceKmValue, sentToMesh, sentToService, notes });
   }
 
   // ── Auto ping ─────────────────────────────────────────────────────
@@ -674,10 +674,10 @@ export default function WardrivePage() {
                       onChange={(e) => setMinDistVal(e.target.value)}
                       className="mt-1 w-full text-xs bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded px-2 py-1 text-gray-900 dark:text-gray-100"
                     >
-                      <option value="0.5">0.5 miles</option>
-                      <option value="1">1 mile</option>
-                      <option value="2">2 miles</option>
-                      <option value="5">5 miles</option>
+                      <option value="0.5">0.5 km</option>
+                      <option value="1">1 km</option>
+                      <option value="2">2 km</option>
+                      <option value="5">5 km</option>
                     </select>
                   </div>
                 </>

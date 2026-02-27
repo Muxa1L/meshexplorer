@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { getWardriveCoverage } from "@/lib/clickhouse/actions";
 import { clickhouse } from "@/lib/clickhouse/clickhouse";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const precision = Math.min(8, Math.max(1, parseInt(searchParams.get("precision") ?? "6", 10)));
   try {
     const [coverageRows, repeatersRs] = await Promise.all([
-      getWardriveCoverage(6),
+      getWardriveCoverage(precision),
       clickhouse.query({
         query: `
           SELECT

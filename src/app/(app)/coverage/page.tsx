@@ -62,6 +62,7 @@ export default function CoveragePage() {
   const [repeaterCount, setRepeaterCount] = useState(0);
   const [showCoverage, setShowCoverage] = useState(true);
   const [showRepeaters, setShowRepeaters] = useState(true);
+  const [precision, setPrecision] = useState(6);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const leafletRef = useRef<any>(null);
@@ -128,7 +129,7 @@ export default function CoveragePage() {
   async function loadData() {
     setLoading(true);
     try {
-      const resp = await fetch("/api/coverage/get-nodes");
+      const resp = await fetch(`/api/coverage/get-nodes?precision=${precision}`);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const { coverage, repeaters } = (await resp.json()) as {
         coverage: CoverageTile[];
@@ -312,6 +313,23 @@ export default function CoveragePage() {
                 <div className="text-xs text-gray-500 dark:text-gray-400">Repeaters</div>
               </div>
             </div>
+          </div>
+
+          {/* Precision selector */}
+          <div className="p-4 border-b border-gray-200 dark:border-neutral-700">
+            <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Precision</h2>
+            <select
+              value={precision}
+              onChange={(e) => setPrecision(Number(e.target.value))}
+              className="w-full text-xs rounded border border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-800 text-gray-700 dark:text-gray-300 px-2 py-1.5"
+            >
+              <option value={4}>4 — ~40 km²</option>
+              <option value={5}>5 — ~1.5 km²</option>
+              <option value={6}>6 — ~120 m²</option>
+              <option value={7}>7 — ~5 m²</option>
+              <option value={8}>8 — ~1 m²</option>
+            </select>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Tile size — refresh to apply.</p>
           </div>
 
           {/* Layer toggles */}
