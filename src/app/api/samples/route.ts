@@ -166,7 +166,7 @@ export async function POST(req: Request) {
     await upsertWardriveCoverage(newCoverage as any);
     // optionally store raw samples as well
     for (const s of deduped) {
-      try { await putSample({ lat: s.latitude || s.lat, lon: s.longitude || s.lng, path: s.path || null, snr: s.snr || null, rssi: s.rssi || null }); } catch(e) {}
+      try { await putSample({ lat: s.latitude || s.lat, lon: s.longitude || s.lng }); } catch(e) {}
     }
     return NextResponse.json({
       success: true,
