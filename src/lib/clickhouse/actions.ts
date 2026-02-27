@@ -51,7 +51,7 @@ export async function getWardriveCoverage(precision: number = 10, days: number =
       SELECT
         geohashEncode(lon, lat, ${precision}) hash,
         count(1) mesh_received,
-        groupArray(distinct repeater) repeaters,
+        groupArray(distinct UPPER(repeater)) repeaters,
         max(ingest_timestamp)lastUpdate
       FROM
         wardrive_samples_mesh wsm
