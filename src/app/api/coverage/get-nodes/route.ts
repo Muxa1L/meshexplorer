@@ -36,9 +36,9 @@ export async function GET(request: Request) {
 
     const coverage = coverageRows.map((r) => ({
       hash: r.hash,
-      received: r.received,
-      lost: r.lost,
-      samples: r.samples,
+      received: Number(r.received),
+      lost: Number(r.lost),
+      samples: Number(r.samples),
       repeaters:
         typeof r.repeaters === "string"
           ? JSON.parse(r.repeaters)

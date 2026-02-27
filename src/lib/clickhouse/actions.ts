@@ -46,7 +46,7 @@ export async function getWardriveCoverage(precision: number = 10): Promise<Wardr
       count(1) received,
       0 lost,
       count(1) samples,
-      groupArray(repeater) repeaters,
+      groupArray(distinct repeater) repeaters,
       max(ingest_timestamp)lastUpdate
     FROM
       wardrive_samples_mesh

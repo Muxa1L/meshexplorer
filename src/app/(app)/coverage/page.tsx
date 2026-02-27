@@ -89,7 +89,7 @@ export default function CoveragePage() {
       });
       const total = tile.received + tile.lost;
       const pct = total > 0 ? Math.round((tile.received / total) * 100) : 0;
-      const rptIds = Object.keys(tile.repeaters ?? {}).join(", ") || "—";
+      const rptIds = Object.values(tile.repeaters ?? {}).join(", ") || "—";
       rect.bindPopup(
         `<b>${tile.hash}</b><br>` +
         `Received: ${tile.received}/${total} (${pct}%)<br>` +
@@ -168,8 +168,8 @@ export default function CoveragePage() {
       if (!isMounted || !mapContainerRef.current || mapRef.current) return;
 
       const map = L.map(mapContainerRef.current, {
-        center: [45, 38],
-        zoom: 10,
+        center: [45.0467, 38.996],
+        zoom: 12,
         worldCopyJump: true,
         attributionControl: false,
       });
