@@ -34,11 +34,11 @@ export async function GET(req: Request) {
 
     const query = `
       WITH time_range AS (
-        SELECT arrayJoin(range(
-          toStartOfFiveMinute(toDateTime(now() - INTERVAL ${days} DAY)),
-          toDateTime(now()),
-          300
-        )) AS time
+        SELECT fromUnixTimestamp(arrayJoin(range(
+          toUnixTimestamp(toStartOfFiveMinute(toDateTime(now() - INTERVAL ${days} DAY))),
+          toUnixTimestamp(toDateTime(now())),
+          3600
+        ))) AS time
       ),
       all_payload_types AS (
         SELECT DISTINCT payload_type
