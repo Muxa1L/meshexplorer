@@ -147,7 +147,7 @@ export default function PacketCountChart({ region }: PacketCountChartProps) {
                 }}
               />
               <Legend onClick={handleLegendClick} wrapperStyle={{ cursor: "pointer" }} />
-              {visiblePayloadTypes.map((type) => (
+              {payloadTypes.map((type) => (
                 <Line
                   key={type}
                   type="monotone"
@@ -156,6 +156,7 @@ export default function PacketCountChart({ region }: PacketCountChartProps) {
                   strokeWidth={2}
                   dot={false}
                   isAnimationActive={false}
+                  strokeOpacity={hiddenSeries.has(type) ? 0 : 1}
                 />
               ))}
             </LineChart>
