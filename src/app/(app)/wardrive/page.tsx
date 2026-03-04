@@ -623,12 +623,12 @@ export default function WardrivePage() {
               <h2 className="text-xs font-semibold text-gray-500 uppercase">Ping Controls</h2>
 
               <div className="flex gap-2">
-                <button
+                {/* <button
                   onClick={() => sendPing({ auto: false }).catch(console.error)}
                   className="flex-1 px-3 py-1.5 text-xs rounded bg-indigo-600 hover:bg-indigo-500 text-white"
                 >
                   Send 1 Ping
-                </button>
+                </button> */}
                 <button
                   onClick={() => running ? stopAutoPing() : startAutoPing().catch(console.error)}
                   className={`flex-1 px-3 py-1.5 text-xs rounded text-white ${running ? "bg-amber-500 hover:bg-amber-400" : "bg-indigo-600 hover:bg-indigo-500"}`}
