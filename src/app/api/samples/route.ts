@@ -2,7 +2,7 @@
 // In-memory store version for this project. Not persistent across restarts.
 
 import { NextResponse } from "next/server";
-import { getWardriveCoveragePings, upsertWardriveCoverage, putSample } from "@/lib/clickhouse/actions";
+import { getWardriveCoveragePings, upsertWardriveCoverage, putSamplePing } from "@/lib/clickhouse/actions";
 import { clickhouse } from "@/lib/clickhouse/clickhouse";
 
 // no in-memory seen data; we persist seen IDs in ClickHouse via wardrive_seen table
@@ -166,7 +166,7 @@ export async function POST(req: Request) {
     await upsertWardriveCoverage(newCoverage as any);
     // optionally store raw samples as well
     for (const s of deduped) {
-      try { await putSample({ lat: s.latitude || s.lat, lon: s.longitude || s.lng }); } catch(e) {}
+      try { await putSamplePing({ lat: s.latitude || s.lat, lon: s.longitude || s.lng, path: s.path || null, snr: s.snr || null, rssi: s.rssi || null }); } catch(e) {}
     }
     return NextResponse.json({
       success: true,

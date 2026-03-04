@@ -8,6 +8,14 @@ export interface WardriveSample{
   lon: number  | null;
 }
 
+export interface WardriveSamplePing{
+  lat: number  | null;
+  lon: number  | null;
+  path: string | null;
+  snr: number  | null; 
+  rssi: number  | null
+}
+
 export interface WardriveCoverageCell {
   hash: string;
   received: number;
@@ -28,6 +36,19 @@ export async function putSample( sample: WardriveSample ){
   ],
   format: 'JSONEachRow',
   columns: [ 'lat', 'lon']
+})
+}
+
+export async function putSamplePing( sample: WardriveSamplePing ){
+// {"lat":45.07664680480957,"lon":39.04420852661133,"path":["d3"],"snr":14.5,"rssi":-29}
+  await clickhouse.insert({
+  table: 'wardrive_samples',
+  // structure should match the desired format, JSONEachRow in this example
+  values: [
+    sample
+  ],
+  format: 'JSONEachRow',
+  columns: [ 'lat', 'lon', 'path', 'snr', 'rssi']
 })
 }
 
