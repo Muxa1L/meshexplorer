@@ -191,10 +191,11 @@ export default function PacketCountChart({ region }: PacketCountChartProps) {
                     key={type}
                     type="monotone"
                     dataKey={type}
-                    stroke={isHidden ? "#c0c0c0" : (COLORS[type] || "#888")}
-                    strokeWidth={isHidden ? 1 : 2}
+                    stroke={COLORS[type] || "#888"}
+                    strokeWidth={2}
                     dot={false}
                     isAnimationActive={false}
+                    strokeOpacity={isHidden ? 0 : 1}
                   />
                 );
               })}
