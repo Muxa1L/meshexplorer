@@ -10,7 +10,6 @@ import {
   useRepeaterPrefixes, 
   useUnusedPrefixes 
 } from "@/hooks/useStats";
-import PacketCountChart from "@/components/PacketCountChart";
 import Link from "next/link";
 
 // Component for anchor links next to section headings
@@ -150,9 +149,14 @@ export default function StatsPage() {
               <AnchorLink id="packet-count-by-type" />
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-              Shows the number of packets by type over a selectable time period.
+              View detailed packet count statistics grouped by type over a selectable time period.
             </p>
-            <PacketCountChart region={region} />
+            <Link
+              href="/packet-count"
+              className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm font-medium"
+            >
+              View Packet Count Chart →
+            </Link>
           </div>
 
           <div className="mb-6">

@@ -51,6 +51,7 @@ export default function Header({ configButtonRef }: HeaderProps) {
       { href: "/messages", label: "Messages" },
       { href: "/packets", label: "Packets" },
       { href: "/stats", label: "Stats" },
+      { href: "/packet-count", label: "Packet stats" },
       { href: "/search", label: "Search" },
       { href: "/api-docs", label: "API Docs" },
       { href: "/wardrive", label: "Wardrive" },
