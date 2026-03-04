@@ -203,6 +203,12 @@ export default function PacketCountChart({ region }: PacketCountChartProps) {
                 tick={{ fill: "#666", fontSize: 12 }}
               />
               <YAxis
+                scale="linear"
+                domain={[0, chartData.reduce((max, entry) => {                  const entryMax = Math.max(...payloadTypes.map((type) => entry[type] || 0));
+                  return Math.max(max, entryMax);
+                }, 0) * 1.1]} // Add 10% padding to max value
+                tickCount={5}
+                type="number"
                 stroke="#666"
                 tick={{ fill: "#666", fontSize: 12 }}
               />

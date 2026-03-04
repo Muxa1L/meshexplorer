@@ -37,7 +37,7 @@ export async function GET(req: Request) {
         SELECT fromUnixTimestamp(arrayJoin(range(
           toUnixTimestamp(toStartOfFiveMinute(toDateTime(now() - INTERVAL ${days} DAY))),
           toUnixTimestamp(toDateTime(now())),
-          3600
+          1*60*60
         ))) AS time
       ),
       all_payload_types AS (
