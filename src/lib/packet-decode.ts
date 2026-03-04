@@ -295,7 +295,7 @@ export function packetGroupKey(decoded: DecodedPayload): { key: string; label: s
       return { key: `txt:${decoded.encrypted}`, label: `TXT_MSG ${decoded.src_hash} ↔ ${decoded.dest_hash}` };
     }
     case "GRP_TXT":
-      return { key: `grptxt:${decoded.mac}`, label: `GRP_TXT ch:${decoded.mac}` };
+      return { key: `grptxt:${decoded.channel_hash}:${decoded.mac}`, label: `GRP_TXT ch:${decoded.channel_hash} MAC:${decoded.mac}` };
     case "GRP_DATA":
       return { key: `grpdata:${decoded.channel_hash}`, label: `GRP_DATA ch:${decoded.channel_hash}` };
     case "ANON_REQ":
