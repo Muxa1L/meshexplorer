@@ -36,6 +36,7 @@ const COLORS: { [key: string]: string } = {
 
 export default function PacketCountChart({ region }: PacketCountChartProps) {
   const [days, setDays] = useState(7);
+  const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set());
   const query = usePacketCountByType(region, days);
 
   // Transform data for the chart: group by time, with each payload type as a series
@@ -70,6 +71,19 @@ export default function PacketCountChart({ region }: PacketCountChartProps) {
       .sort(([, a], [, b]) => b - a)
       .map(([type]) => type);
   }, [query.data?.data]);
+
+  const handleLegendClick = (e: any) => {
+    const dataKey = e.dataKey;
+    const newHiddenSeries = new Set(hiddenSeries);
+    if (newHiddenSeries.has(dataKey)) {
+      newHiddenSeries.delete(dataKey);
+    } else {
+      newHiddenSeries.add(dataKey);
+    }
+    setHiddenSeries(newHiddenSeries);
+  };
+
+  const visiblePayloadTypes = payloadTypes.filter((type) => !hiddenSeries.has(type));
 
   return (
     <div className="w-full">
@@ -132,8 +146,8 @@ export default function PacketCountChart({ region }: PacketCountChartProps) {
                   color: "#000",
                 }}
               />
-              <Legend />
-              {payloadTypes.map((type) => (
+              <Legend onClick={handleLegendClick} wrapperStyle={{ cursor: "pointer" }} />
+              {visiblePayloadTypes.map((type) => (
                 <Line
                   key={type}
                   type="monotone"
@@ -152,7 +166,8 @@ export default function PacketCountChart({ region }: PacketCountChartProps) {
       <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
         <p>
           Showing packet count by type over the last {days} day{days > 1 ? "s" : ""}.
-          Chart displays {payloadTypes.length} packet type{payloadTypes.length > 1 ? "s" : ""}.
+          Displaying {visiblePayloadTypes.length} of {payloadTypes.length} packet type{payloadTypes.length > 1 ? "s" : ""}.
+          Click legend items to show/hide series.
         </p>
       </div>
     </div>
