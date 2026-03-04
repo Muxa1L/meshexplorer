@@ -122,6 +122,37 @@ export default function PacketCountChart({ region }: PacketCountChartProps) {
     );
   };
 
+  const CustomTooltip = (props: any) => {
+    const { active, payload, label } = props;
+    if (!active || !payload) return null;
+
+    const filteredPayload = payload.filter((entry: any) => !hiddenSeries.has(entry.dataKey));
+    
+    if (filteredPayload.length === 0) return null;
+
+    return (
+      <div
+        style={{
+          backgroundColor: "#fff",
+          border: "1px solid #ccc",
+          borderRadius: "4px",
+          color: "#000",
+          padding: "8px 12px",
+        }}
+      >
+        <p style={{ margin: "0 0 6px 0", fontSize: "12px", fontWeight: "bold" }}>
+          {label}
+        </p>
+        {filteredPayload.map((entry: any, index: number) => (
+          <p key={`tooltip-${index}`} style={{ margin: "2px 0", fontSize: "12px" }}>
+            <span style={{ color: entry.color, fontWeight: "bold" }}>●</span>{" "}
+            {entry.name}: {entry.value}
+          </p>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="w-full">
       <div className="mb-4 flex gap-2 flex-wrap">
@@ -175,14 +206,7 @@ export default function PacketCountChart({ region }: PacketCountChartProps) {
                 stroke="#666"
                 tick={{ fill: "#666", fontSize: 12 }}
               />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "#fff",
-                  border: "1px solid #ccc",
-                  borderRadius: "4px",
-                  color: "#000",
-                }}
-              />
+              <Tooltip content={<CustomTooltip />} />
               <Legend content={handleLegendRender} wrapperStyle={{ cursor: "pointer" }} />
               {payloadTypes.map((type) => {
                 const isHidden = hiddenSeries.has(type);
