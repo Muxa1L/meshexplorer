@@ -686,7 +686,7 @@ export default function WardrivePage() {
                       onChange={(e) => setIntervalVal(e.target.value)}
                       className="mt-1 w-full text-xs bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded px-2 py-1 text-gray-900 dark:text-gray-100"
                     >
-                      <option value="0.5">Every 30 seconds</option>
+                      {/* <option value="0.5">Every 30 seconds</option> */}
                       <option value="1">Every 1 minute</option>
                       <option value="2">Every 2 minutes</option>
                       <option value="5">Every 5 minutes</option>
