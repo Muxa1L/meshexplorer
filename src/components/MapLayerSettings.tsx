@@ -215,18 +215,18 @@ export default function MapLayerSettingsComponent({ onSettingsChange }: MapLayer
           </div>
 
           {/* Show wardrive coverage overlay */}
-          {/* <label className="flex items-center gap-2 mb-1 cursor-pointer">
+          <label className="flex items-center gap-2 mb-1 cursor-pointer">
             <input
               type="checkbox"
               checked={settings.showWardriveOverlay}
               onChange={(e) => updateSetting('showWardriveOverlay', e.target.checked)}
               className="rounded"
             />
-            <span className="text-sm text-gray-700 dark:text-gray-300">Show wardrive coverage</span>
-          </label> */}
+            <span className="text-sm text-gray-700 dark:text-gray-300">Show wardrive ping coverage</span>
+          </label>
 
           {/* Resolution sub-option */}
-          {/* <div className="ml-6 mb-3">
+          <div className="ml-6 mb-3">
             <label className={`block text-sm mb-1 ${
               settings.showWardriveOverlay
                 ? 'text-gray-700 dark:text-gray-300'
@@ -250,7 +250,7 @@ export default function MapLayerSettingsComponent({ onSettingsChange }: MapLayer
                 </option>
               ))}
             </select>
-          </div> */}
+          </div>
         </div>
       )}
     </div>

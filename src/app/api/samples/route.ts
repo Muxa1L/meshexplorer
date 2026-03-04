@@ -2,7 +2,7 @@
 // In-memory store version for this project. Not persistent across restarts.
 
 import { NextResponse } from "next/server";
-import { getWardriveCoverage, upsertWardriveCoverage, putSample } from "@/lib/clickhouse/actions";
+import { getWardriveCoveragePings, upsertWardriveCoverage, putSample } from "@/lib/clickhouse/actions";
 import { clickhouse } from "@/lib/clickhouse/clickhouse";
 
 // no in-memory seen data; we persist seen IDs in ClickHouse via wardrive_seen table
@@ -120,7 +120,7 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const precis = parseInt(url.searchParams.get('precision') || '10', 10) || 10;
   // fetch persisted coverage from ClickHouse at requested resolution
-  const rows = await getWardriveCoverage(precis);
+  const rows = await getWardriveCoveragePings(precis);
   // convert array to object by hash for compatibility
   const coverage: Record<string, any> = {};
   rows.forEach(r => {

@@ -81,6 +81,38 @@ export async function getWardriveCoverage(precision: number = 10, days: number =
   }
 }
 
+export async function getWardriveCoveragePings(precision: number = 7): Promise<WardriveCoverageCell[]> {
+  // support aggregating at lower resolution by truncating geohash
+  let query: string;
+  if (precision && precision !== 7) {
+    query = `
+      SELECT
+        substring(hash,1,${precision}) AS hash,
+        sum(received) AS received,
+        sum(lost) AS lost,
+        sum(samples) AS samples,
+        any(repeaters) AS repeaters,
+        max(lastUpdate) AS lastUpdate,
+        any(appVersion) AS appVersion
+      FROM wardrive_coverage
+      GROUP BY hash
+    `;
+  } else {
+    query = `
+      SELECT hash, received, lost, samples, repeaters, lastUpdate, appVersion
+      FROM wardrive_coverage
+    `;
+  }
+  try {
+    const rs = await clickhouse.query({ query, format: 'JSONEachRow' });
+    const rows = await rs.json();
+    return rows as WardriveCoverageCell[];
+  } catch (err) {
+    console.error('Error querying wardrive_coverage', err);
+    return [];
+  }
+}
+
 /**
  * Upsert coverage cells into ClickHouse. Uses INSERT; collisions will overwrite
  * existing rows by hash using `ON CONFLICT` pattern or replacing value column
