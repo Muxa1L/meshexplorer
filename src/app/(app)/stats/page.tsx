@@ -10,6 +10,7 @@ import {
   useRepeaterPrefixes, 
   useUnusedPrefixes 
 } from "@/hooks/useStats";
+import PacketCountChart from "@/components/PacketCountChart";
 import Link from "next/link";
 
 // Component for anchor links next to section headings
@@ -141,6 +142,17 @@ export default function StatsPage() {
                 </tbody>
               </table>
             </div>
+          </div>
+
+          <div className="mb-6">
+            <div className="group flex items-center">
+              <h2 id="packet-count-by-type" className="text-lg font-semibold mb-2">Packet Count by Type</h2>
+              <AnchorLink id="packet-count-by-type" />
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+              Shows the number of packets by type over a selectable time period.
+            </p>
+            <PacketCountChart region={region} />
           </div>
 
           <div className="mb-6">

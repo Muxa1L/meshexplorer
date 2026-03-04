@@ -37,6 +37,17 @@ interface RepeaterPrefixesResponse {
   data: RepeaterPrefixRow[];
 }
 
+interface PacketCountByTypeRow {
+  time: string;
+  payload_type: number;
+  payload_type_name: string;
+  count: number;
+}
+
+interface PacketCountByTypeResponse {
+  data: PacketCountByTypeRow[];
+}
+
 const STALE_TIME = 5 * 60 * 1000; // 5 minutes
 const GC_TIME = 10 * 60 * 1000; // 10 minutes
 
@@ -149,4 +160,28 @@ export function useUnusedPrefixes(region?: string) {
     isLoading,
     error,
   };
+}
+
+export function usePacketCountByType(region?: string, days: number = 7) {
+  return useQuery<PacketCountByTypeResponse>({
+    queryKey: ['stats', 'packet-count-by-type', region, days],
+    queryFn: async ({ signal }) => {
+      const params = new URLSearchParams();
+      if (region) params.append('region', region);
+      params.append('days', days.toString());
+      
+      const response = await fetch(buildApiUrl(`/api/stats/packet-count-by-type?${params.toString()}`), {
+        signal
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch packet count by type: ${response.statusText}`);
+      }
+      
+      return response.json();
+    },
+    staleTime: STALE_TIME,
+    gcTime: GC_TIME,
+    retry: 2,
+  });
 }
