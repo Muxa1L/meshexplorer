@@ -84,6 +84,9 @@ export async function getWardriveCoverage(precision: number = 10, days: number =
 export async function getWardriveCoveragePings(precision: number = 7): Promise<WardriveCoverageCell[]> {
   // support aggregating at lower resolution by truncating geohash
   let query: string;
+  if (precision > 7) { 
+    precision = 7; // enforce max precision of 7 for pings to avoid excessive cardinality
+  }
   query = `
     SELECT
       substring(hash,1,${precision}) AS hash,

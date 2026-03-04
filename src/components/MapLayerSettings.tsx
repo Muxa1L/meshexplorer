@@ -244,7 +244,7 @@ export default function MapLayerSettingsComponent({ onSettingsChange }: MapLayer
                   : 'bg-gray-100 dark:bg-neutral-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
               }`}
             >
-              {[5, 6, 7, 8, 9].map((p) => (
+              {[5, 6, 7].map((p) => (
                 <option key={p} value={p}>
                   {p} – {p <= 5 ? 'very coarse' : p <= 6 ? 'coarse' : p <= 7 ? 'medium' : p <= 8 ? 'fine' : 'very fine'}
                 </option>
