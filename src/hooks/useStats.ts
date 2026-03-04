@@ -133,12 +133,13 @@ export function useUnusedPrefixes(region?: string) {
     // Generate all possible 2-character hex prefixes (01-FE, excluding 00 and FF)
     const allPrefixes = [];
     for (let i = 1; i < 255; i++) {
-      allPrefixes.push(i.toString(16).padStart(2, '0').toUpperCase());
+      const prefix = i.toString(16).padStart(2, '0').toUpperCase();
+      if (prefix.startsWith('7')||prefix.startsWith('F')) continue; // skip reserved prefixes
+      allPrefixes.push(prefix);
     }
     
     // Get used prefixes from the API response
     const usedPrefixes = new Set(repeaterPrefixesData.data.map(row => row.prefix));
-    
     // Find unused prefixes
     return allPrefixes.filter(prefix => !usedPrefixes.has(prefix));
   }, [repeaterPrefixesData?.data]);
