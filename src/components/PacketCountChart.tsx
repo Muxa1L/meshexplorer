@@ -85,6 +85,43 @@ export default function PacketCountChart({ region }: PacketCountChartProps) {
 
   const visiblePayloadTypes = payloadTypes.filter((type) => !hiddenSeries.has(type));
 
+  const handleLegendRender = (props: any) => {
+    const { payload } = props;
+    return (
+      <ul style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "8px" }}>
+        {payload.map((entry: any, index: number) => {
+          const isHidden = hiddenSeries.has(entry.dataKey);
+          return (
+            <li
+              key={`legend-${index}`}
+              style={{
+                cursor: "pointer",
+                color: isHidden ? "#999" : entry.color,
+                textDecoration: isHidden ? "line-through" : "none",
+                opacity: isHidden ? 0.6 : 1,
+                padding: "4px 8px",
+                borderRadius: "3px",
+                fontSize: "12px",
+              }}
+              onClick={() => handleLegendClick({ dataKey: entry.dataKey })}
+            >
+              <span
+                style={{
+                  display: "inline-block",
+                  width: "12px",
+                  height: "2px",
+                  backgroundColor: isHidden ? "#999" : entry.color,
+                  marginRight: "6px",
+                }}
+              />
+              {entry.dataKey}
+            </li>
+          );
+        })}
+      </ul>
+    );
+  };
+
   return (
     <div className="w-full">
       <div className="mb-4 flex gap-2 flex-wrap">
@@ -146,19 +183,21 @@ export default function PacketCountChart({ region }: PacketCountChartProps) {
                   color: "#000",
                 }}
               />
-              <Legend onClick={handleLegendClick} wrapperStyle={{ cursor: "pointer" }} />
-              {payloadTypes.map((type) => (
-                <Line
-                  key={type}
-                  type="monotone"
-                  dataKey={type}
-                  stroke={COLORS[type] || "#888"}
-                  strokeWidth={2}
-                  dot={false}
-                  isAnimationActive={false}
-                  strokeOpacity={hiddenSeries.has(type) ? 0 : 1}
-                />
-              ))}
+              <Legend content={handleLegendRender} wrapperStyle={{ cursor: "pointer" }} />
+              {payloadTypes.map((type) => {
+                const isHidden = hiddenSeries.has(type);
+                return (
+                  <Line
+                    key={type}
+                    type="monotone"
+                    dataKey={type}
+                    stroke={isHidden ? "#c0c0c0" : (COLORS[type] || "#888")}
+                    strokeWidth={isHidden ? 1 : 2}
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                );
+              })}
             </LineChart>
           </ResponsiveContainer>
         </div>
