@@ -222,7 +222,7 @@ export default function MapLayerSettingsComponent({ onSettingsChange }: MapLayer
               onChange={(e) => updateSetting('showWardriveOverlay', e.target.checked)}
               className="rounded"
             />
-            <span className="text-sm text-gray-700 dark:text-gray-300">Show wardrive ping coverage</span>
+            <span className="text-sm text-gray-700 dark:text-gray-300">Show wardrive discover coverage</span>
           </label>
 
           {/* Resolution sub-option */}
