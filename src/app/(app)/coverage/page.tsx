@@ -310,7 +310,7 @@ export default function CoveragePage() {
         <div ref={mapContainerRef} className="absolute inset-0" />
 
         {/* Map legend overlay */}
-        <div className="absolute bottom-4 left-4 bg-white/95 dark:bg-neutral-900/95 text-xs text-gray-700 dark:text-gray-300 dark:text-gray-300 rounded shadow p-2 z-[1000] pointer-events-none border border-gray-200 dark:border-neutral-700">
+        {/* <div className="absolute bottom-4 left-4 bg-white/95 dark:bg-neutral-900/95 text-xs text-gray-700 dark:text-gray-300 dark:text-gray-300 rounded shadow p-2 z-[1000] pointer-events-none border border-gray-200 dark:border-neutral-700">
           <div className="font-semibold mb-1">Coverage</div>
           {COVERAGE_LEGEND.map(({ color, label }) => (
             <div key={label} className="flex items-center gap-1 mt-0.5">
@@ -325,7 +325,7 @@ export default function CoveragePage() {
               {label}
             </div>
           ))}
-        </div>
+        </div> */}
       </div>
 
       {/* ── Panel (bottom on mobile, left on desktop) ── */}
