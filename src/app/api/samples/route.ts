@@ -54,6 +54,9 @@ function aggregateSamples(samples: any[]) {
   const coverage: Record<string, any> = {};
   const now = new Date().toISOString();
   samples.forEach(sample => {
+    if (sample.pingSuccess === null || sample.pingSuccess === undefined) {
+      return;
+    }
     const lat = sample.latitude || sample.lat;
     const lng = sample.longitude || sample.lon;
     if (!lat || !lng) return;
@@ -70,6 +73,7 @@ function aggregateSamples(samples: any[]) {
         appVersion: sample.appVersion || 'unknown'
       };
     }
+    
     const success = sample.pingSuccess === true || (sample.nodeId && sample.nodeId !== 'Unknown');
     const failed = sample.pingSuccess === false || sample.nodeId === 'Unknown';
     if (sample.appVersion && sample.timestamp >= coverage[hash].lastUpdate) {
@@ -77,8 +81,8 @@ function aggregateSamples(samples: any[]) {
     }
     if (success) {
       coverage[hash].received += 1;
-      if (sample.path && sample.path !== 'Unknown') {
-        const nodeId = sample.path;
+      if (sample.nodeId && sample.nodeId !== 'Unknown') {
+        const nodeId = sample.nodeId;
         const sampleTime = new Date(sample.timestamp || now).getTime();
         if (!coverage[hash].repeaters[nodeId] || new Date(coverage[hash].repeaters[nodeId].lastSeen).getTime() < sampleTime) {
           coverage[hash].repeaters[nodeId] = {
