@@ -114,7 +114,7 @@ export async function getWardriveCoveragePings(precision: number = 7): Promise<W
       sum(received) AS received,
       sum(lost) AS lost,
       sum(samples) AS samples,
-      any(repeaters) AS repeaters,
+      groupArray(repeaters) AS repeaters,
       max(lastUpdate) AS lastUpdate,
       any(appVersion) AS appVersion
     FROM wardrive_coverage

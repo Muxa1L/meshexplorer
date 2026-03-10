@@ -4,6 +4,7 @@
 import { NextResponse } from "next/server";
 import { getWardriveCoveragePings, upsertWardriveCoverage, putSamplePing } from "@/lib/clickhouse/actions";
 import { clickhouse } from "@/lib/clickhouse/clickhouse";
+import iconv from "iconv-lite";
 
 // no in-memory seen data; we persist seen IDs in ClickHouse via wardrive_seen table
 
@@ -83,10 +84,11 @@ function aggregateSamples(samples: any[]) {
       coverage[hash].received += 1;
       if (sample.nodeId && sample.nodeId !== 'Unknown') {
         const nodeId = sample.nodeId;
+        const repName = iconv.decode(iconv.encode(sample.repeaterName, 'iso88591'), 'utf8');
         const sampleTime = new Date(sample.timestamp || now).getTime();
         if (!coverage[hash].repeaters[nodeId] || new Date(coverage[hash].repeaters[nodeId].lastSeen).getTime() < sampleTime) {
           coverage[hash].repeaters[nodeId] = {
-            name: sample.repeaterName || nodeId,
+            name: repName || nodeId,  
             rssi: sample.rssi || null,
             snr: sample.snr || null,
             lastSeen: sample.timestamp || now
@@ -143,6 +145,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    
     // console.info('Received samples POST request', body );
     if (!body.samples || !Array.isArray(body.samples)) {
       return NextResponse.json({ error: 'Invalid request: samples array required' }, { status: 400 });

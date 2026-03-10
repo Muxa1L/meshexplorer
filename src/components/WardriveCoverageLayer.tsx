@@ -119,16 +119,39 @@ export default function WardriveCoverageLayer({
               ? `🟡 Recent (${daysOld}d ago)`
               : `⚪ Old (${daysOld}d ago)`;
 
-          rect.bindPopup(`
-            <div style="font-size:13px;min-width:180px">
-              <div style="color:${color};font-weight:bold;margin-bottom:6px">${freshnessLabel}</div>
-              <div><b>Success:</b> ${successRate}%</div>
-              <div><b>Received:</b> ${Math.round(cell.received ?? 0)}</div>
-              <div><b>Lost:</b> ${Math.round(cell.lost ?? 0)}</div>
-              <div><b>Samples:</b> ${cell.samples ?? 0}</div>
-              <div><b>Last update:</b> ${new Date(cell.lastUpdate).toLocaleDateString()}</div>
+          let repeatersHtml = 'None';
+          if (cell.repeaters) {
+            const repeaterList: string[] = [];
+            cell.repeaters.forEach((rep: any) => {
+              if (rep == '{}') return;
+              let obj = JSON.parse(rep);
+              if (typeof obj === 'object' && obj !== undefined && obj !== null) {
+                obj = Object.values(obj)[0];
+                const escapedName = (obj["name"] || 'Unknown').replace(/'/g, "\\'");
+                const repeaterHtml = `<span class="repeater-link" onclick="console.log('repeater click')" title="Click for details">${escapedName}</span>`;
+                if (!repeaterList.includes(repeaterHtml)){
+                  repeaterList.push(repeaterHtml);
+                }
+                // repeaterList.push(repeaterHtml);
+              }
+            });
+            
+            if (repeaterList.length > 0) repeatersHtml = repeaterList.join(', ');
+          }
+
+          const popup = `
+            <div class="popup-content">
+              <div style="color:${color}; font-weight:bold; margin-bottom:8px;">${freshnessLabel}</div>
+              <div><span class="popup-label">Success Rate:</span> ${successRate}%</div>
+              <div><span class="popup-label">Received:</span> ${Math.round(cell.received || 0)}</div>
+              <div><span class="popup-label">Lost:</span> ${Math.round(cell.lost || 0)}</div>
+              <div><span class="popup-label">Samples:</span> ${cell.samples || 0}</div>
+              <div><span class="popup-label">Repeaters:</span> ${repeatersHtml}</div>
+              <div style="font-size:10px;color:#888;margin-top:4px;">Click repeater name for signal details</div>
+              <div><span class="popup-label">Last Update:</span> ${new Date(cell.lastUpdate).toLocaleDateString()}</div>
             </div>
-          `);
+          `;
+          rect.bindPopup(popup);
 
           layerGroup.addLayer(rect);
         });
