@@ -20,6 +20,12 @@ export const REGIONS: RegionConfig[] = [
     broker: "tcp://192.168.1.20:11883",
     topics: ["meshcore/krr_pb"]
   },
+  { 
+    name: "stavropol",
+    friendlyName: "Stavropol",
+    broker: "tcp://192.168.1.20:11883",
+    topics: ["meshcore/stv"]
+  },
 ];
 
 export function getRegionConfig(regionName: string): RegionConfig | undefined {

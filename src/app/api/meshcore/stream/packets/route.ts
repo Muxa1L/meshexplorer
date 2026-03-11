@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   const maxRows = searchParams.get('maxRows');
 
   // Validate region against allowed values
-  const allowedRegions = ['seattle', 'portland', 'boston', 'krasnodar'];
+  const allowedRegions = ['krasnodar_pub', 'stavropol']; // Add more allowed regions as needed  
   const validRegion = region && allowedRegions.includes(region) ? region : undefined;
 
   // Validate payload type (0-15 based on the schema)

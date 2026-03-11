@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   const skipInitialMessages = searchParams.has('skipInitialMessages');
 
   // Validate region against allowed values (same as packets endpoint)
-  const allowedRegions = ['seattle', 'portland', 'boston', 'krasnodar'];
+  const allowedRegions = ['krasnodar_pub', 'stavropol'];
   const validRegion = region && allowedRegions.includes(region) ? region : undefined;
 
   // Validate channel ID (should be hex string if provided)
