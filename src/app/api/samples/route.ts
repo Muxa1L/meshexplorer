@@ -162,6 +162,10 @@ export async function POST(req: Request) {
     // filter already seen using database
     const deduped: any[] = [];
     for (const s of batchUnique) {
+      //skip gps samples.
+      if (s.pingSuccess === null || s.pingSuccess === undefined) {
+        continue;
+      }
       const seen = await import("@/lib/clickhouse/actions").then(m => m.hasSeenId(s.__id));
       if (!seen) {
         deduped.push(s);
