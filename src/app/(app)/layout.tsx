@@ -8,7 +8,7 @@ export default function RootLayout({
   return (
     <>
       <Header />
-      <main className="flex-1 flex flex-col w-full bg-neutral-200 dark:bg-neutral-800">
+      <main className="flex min-h-0 flex-1 flex-col overflow-y-auto w-full bg-neutral-200 dark:bg-neutral-800">
         {children}
       </main>
     </>

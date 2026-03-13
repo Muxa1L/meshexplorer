@@ -40,10 +40,10 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} h-dvh overflow-hidden antialiased`}
         style={{ '--header-height': '64px' } as React.CSSProperties}
       >
-        <div className="flex flex-col min-h-screen w-full">
+        <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
           <LocaleProvider>
             <ThemeProvider>
               <QueryProvider>
