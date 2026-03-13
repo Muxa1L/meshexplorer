@@ -45,6 +45,7 @@ export default function Header({ configButtonRef }: HeaderProps) {
   const navRef = useRef<HTMLElement>(null);
   const itemsRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const actionsRef = useRef<HTMLDivElement>(null);
 
   // Measure available space and determine which items can fit
   const measureAndLayout = useCallback(() => {
@@ -64,7 +65,7 @@ export default function Header({ configButtonRef }: HeaderProps) {
     if (!navRef.current || !itemsRef.current) return;
 
     const navWidth = navRef.current.offsetWidth;
-    const rightSectionWidth = 200; // Approximate width for buttons
+    const rightSectionWidth = actionsRef.current?.offsetWidth ?? 200;
     const availableWidth = navWidth - rightSectionWidth - 48; // 48px for padding
 
     // Create temporary elements to measure item widths
@@ -185,11 +186,11 @@ export default function Header({ configButtonRef }: HeaderProps) {
             )}
           </div>
         </nav>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <div className="hidden sm:flex items-center gap-1 rounded border border-gray-200 dark:border-neutral-700 p-1">
+        <div ref={actionsRef} className="flex items-center gap-1.5 flex-shrink-0 sm:gap-2">
+          <div className="flex items-center gap-1 rounded border border-gray-200 p-1 dark:border-neutral-700">
             <button
               onClick={() => setLocale("en")}
-              className={`px-2 py-1 text-xs rounded ${locale === "en" ? "bg-blue-600 text-white" : "text-gray-700 dark:text-gray-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"}`}
+              className={`px-1.5 py-1 text-xs rounded sm:px-2 ${locale === "en" ? "bg-blue-600 text-white" : "text-gray-700 dark:text-gray-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"}`}
               aria-label={t("common.english")}
               title={t("common.english")}
             >
@@ -197,7 +198,7 @@ export default function Header({ configButtonRef }: HeaderProps) {
             </button>
             <button
               onClick={() => setLocale("ru")}
-              className={`px-2 py-1 text-xs rounded ${locale === "ru" ? "bg-blue-600 text-white" : "text-gray-700 dark:text-gray-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"}`}
+              className={`px-1.5 py-1 text-xs rounded sm:px-2 ${locale === "ru" ? "bg-blue-600 text-white" : "text-gray-700 dark:text-gray-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"}`}
               aria-label={t("common.russian")}
               title={t("common.russian")}
             >
