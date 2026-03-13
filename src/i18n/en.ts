@@ -112,11 +112,17 @@ export const enMessages = {
   },
   chatBox: {
     title: "MeshCore Chat",
+    channels: "Channels",
     allMessages: "All Messages",
+    aggregatedFeed: "All known channels in one timeline",
+    secureChannel: "Encrypted channel",
+    liveFeed: "Live",
     refreshMessages: "Refresh chat messages",
     maximize: "Maximize MeshCore Chat",
     minimize: "Minimize MeshCore Chat",
     manageChannelKeys: "Manage channel keys",
+    openChannelSettings: "Open channel settings",
+    selectRegion: "Select a region to view messages.",
     noMessages: "No chat messages found.",
   },
   chatMessage: {

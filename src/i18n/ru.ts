@@ -112,11 +112,17 @@ export const ruMessages = {
   },
   chatBox: {
     title: "Чат MeshCore",
+    channels: "Каналы",
     allMessages: "Все сообщения",
+    aggregatedFeed: "Все известные каналы в одной ленте",
+    secureChannel: "Зашифрованный канал",
+    liveFeed: "Онлайн",
     refreshMessages: "Обновить сообщения чата",
     maximize: "Развернуть чат MeshCore",
     minimize: "Свернуть чат MeshCore",
     manageChannelKeys: "Управление ключами каналов",
+    openChannelSettings: "Открыть настройки каналов",
+    selectRegion: "Выберите регион, чтобы увидеть сообщения.",
     noMessages: "Сообщения не найдены.",
   },
   chatMessage: {
