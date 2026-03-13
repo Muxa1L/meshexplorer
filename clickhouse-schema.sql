@@ -50,10 +50,10 @@ CREATE TABLE IF NOT EXISTS wardrive_samples_mesh (
     ingest_timestamp DateTime DEFAULT now(),
     lat              Float64,
     lon              Float64,
-    path             String COMMENT 'First repeater 2-char hex prefix'
+    repeater         String COMMENT 'First repeater 2-char hex prefix'
 ) ENGINE = MergeTree()
 PARTITION BY toYYYYMM(ingest_timestamp)
-ORDER BY (ingest_timestamp, path)
+ORDER BY (ingest_timestamp, repeater)
 TTL ingest_timestamp + INTERVAL 90 DAY;
 
 -- DDL for meshcore_status table
