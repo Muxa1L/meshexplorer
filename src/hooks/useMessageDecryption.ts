@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { decryptMeshcoreGroupMessage } from '@/lib/meshcore';
 import { useMemo } from 'react';
+import { useLocale } from '@/components/LocaleProvider';
 
 export interface MessageDecryptionParams {
   encrypted_message: string;
@@ -35,11 +36,13 @@ export function useMessageDecryption({
   parse = true,
   enabled = true
 }: UseMessageDecryptionParams) {
+  const { locale, t } = useLocale();
+
   // Stabilize the known keys to prevent unnecessary re-renders
   const knownKeysString = useMemo(() => knownKeys.join(','), [knownKeys]);
 
   return useQuery<MessageDecryptionResult, Error>({
-    queryKey: ['message-decryption', encrypted_message, mac, channel_hash, knownKeysString, parse],
+    queryKey: ['message-decryption', locale, encrypted_message, mac, channel_hash, knownKeysString, parse],
     queryFn: async (): Promise<MessageDecryptionResult> => {
       try {
         const result = await decryptMeshcoreGroupMessage({
@@ -53,7 +56,7 @@ export function useMessageDecryption({
         if (result === null) {
           return {
             decrypted: null,
-            error: "Could not decrypt message with any known key."
+            error: t("chatMessage.decryptFailed")
           };
         }
 
@@ -64,7 +67,7 @@ export function useMessageDecryption({
       } catch (err) {
         return {
           decrypted: null,
-          error: err instanceof Error ? err.message : "Decryption error occurred."
+          error: err instanceof Error ? err.message : t("chatMessage.decryptError")
         };
       }
     },

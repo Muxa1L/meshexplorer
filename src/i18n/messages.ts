@@ -121,6 +121,8 @@ export const messages = {
       type: "type",
       channel: "channel",
       heardRepeats: "Heard {count} times",
+      decryptFailed: "Could not decrypt message with any known key.",
+      decryptError: "Decryption error occurred.",
     },
     path: {
       paths: "Paths",
@@ -487,6 +489,8 @@ export const messages = {
       type: "тип",
       channel: "канал",
       heardRepeats: "Получено раз: {count}",
+      decryptFailed: "Не удалось расшифровать сообщение ни одним из известных ключей.",
+      decryptError: "Произошла ошибка при расшифровке.",
     },
     path: {
       paths: "Маршруты",
