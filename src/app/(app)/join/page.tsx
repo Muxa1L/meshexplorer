@@ -93,7 +93,7 @@ export default function JoinPage() {
   const afterItems = content.afterItems;
 
   return (
-    <div className="min-h-screen overflow-y-auto bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.18),transparent_32%),radial-gradient(circle_at_top_right,rgba(34,197,94,0.1),transparent_26%),linear-gradient(to_bottom,rgba(248,250,252,1),rgba(241,245,249,1))] py-8 dark:bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.18),transparent_30%),radial-gradient(circle_at_top_right,rgba(6,182,212,0.12),transparent_24%),linear-gradient(to_bottom,rgba(10,15,28,1),rgba(17,24,39,1))]">
+    <div className="min-h-full overflow-y-auto bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.18),transparent_32%),radial-gradient(circle_at_top_right,rgba(34,197,94,0.1),transparent_26%),linear-gradient(to_bottom,rgba(248,250,252,1),rgba(241,245,249,1))] py-8 dark:bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.18),transparent_30%),radial-gradient(circle_at_top_right,rgba(6,182,212,0.12),transparent_24%),linear-gradient(to_bottom,rgba(10,15,28,1),rgba(17,24,39,1))]">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 sm:px-6 lg:px-8">
         <section className="px-1 py-2">
           <h1 className="text-3xl font-bold tracking-tight text-gray-950 dark:text-white sm:text-4xl">
