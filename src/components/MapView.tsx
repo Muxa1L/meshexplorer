@@ -22,15 +22,36 @@ import WardriveCoverageLayer from "@/components/WardriveCoverageLayer";
 import { useLocale } from "./LocaleProvider";
 
 const DEFAULT = {
-  lat: 45.02756 , // Center between Seattle and Portland
+  lat: 45.02756,
   lng: 39.07356,
-  zoom: 12, // Zoom level to show both cities
+  zoom: 12,
+};
+
+const REGION_DEFAULTS: Record<string, typeof DEFAULT> = {
+  krasnodar_pub: {
+    lat: 45.02756,
+    lng: 39.07356,
+    zoom: 12,
+  },
+  stavropol: {
+    lat: 45.0307,
+    lng: 41.9768,
+    zoom: 12,
+  },
 };
 
 interface MapQuery {
   lat?: number;
   lng?: number;
   zoom?: number;
+}
+
+function getDefaultMapView(region?: string) {
+  if (region && REGION_DEFAULTS[region]) {
+    return REGION_DEFAULTS[region];
+  }
+
+  return DEFAULT;
 }
 
 
@@ -475,12 +496,33 @@ function AllNeighborLines({
   );
 }
 
+function MapViewSync({ center, zoom }: { center: [number, number]; zoom: number }) {
+  const map = useMap();
+
+  useEffect(() => {
+    const currentCenter = map.getCenter();
+    const currentZoom = map.getZoom();
+    const [targetLat, targetLng] = center;
+
+    if (
+      Math.abs(currentCenter.lat - targetLat) > 0.00001 ||
+      Math.abs(currentCenter.lng - targetLng) > 0.00001 ||
+      currentZoom !== zoom
+    ) {
+      map.setView(center, zoom);
+    }
+  }, [map, center, zoom]);
+
+  return null;
+}
+
 interface MapViewProps {
   target?: '_blank' | '_self' | '_parent' | '_top';
 }
 
 export default function MapView({ target = '_self' }: MapViewProps = {}) {
   const { t } = useLocale();
+  const searchParams = useSearchParams();
   const [nodePositions, setNodePositions] = useState<NodePosition[]>([]);
   const [bounds, setBounds] = useState<[[number, number], [number, number]] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -489,6 +531,10 @@ export default function MapView({ target = '_self' }: MapViewProps = {}) {
   const lastRequestedBounds = useRef<[[number, number], [number, number]] | null>(null);
   const configResult = useConfig();
   const config = configResult?.config;
+  const defaultMapView = useMemo(
+    () => getDefaultMapView(config?.selectedRegion),
+    [config?.selectedRegion],
+  );
   
   // Map layer settings state
   const [mapLayerSettings, setMapLayerSettings] = useState<MapLayerSettings>({
@@ -507,13 +553,25 @@ export default function MapView({ target = '_self' }: MapViewProps = {}) {
   
   // Use query params to persist map position
   const { query: mapQuery, updateQuery: updateMapQuery } = useQueryParams<MapQuery>({
-    lat: DEFAULT.lat,
-    lng: DEFAULT.lng,
-    zoom: DEFAULT.zoom,
+    lat: defaultMapView.lat,
+    lng: defaultMapView.lng,
+    zoom: defaultMapView.zoom,
   });
-  
-  const mapCenter: [number, number] = [mapQuery.lat ?? DEFAULT.lat, mapQuery.lng ?? DEFAULT.lng];
-  const mapZoom = mapQuery.zoom ?? DEFAULT.zoom;
+
+  const hasExplicitMapPosition = searchParams.has("lat") || searchParams.has("lng") || searchParams.has("zoom");
+
+  useEffect(() => {
+    if (!hasExplicitMapPosition) {
+      updateMapQuery({
+        lat: defaultMapView.lat,
+        lng: defaultMapView.lng,
+        zoom: defaultMapView.zoom,
+      });
+    }
+  }, [defaultMapView, hasExplicitMapPosition, updateMapQuery]);
+
+  const mapCenter: [number, number] = [mapQuery.lat ?? defaultMapView.lat, mapQuery.lng ?? defaultMapView.lng];
+  const mapZoom = mapQuery.zoom ?? defaultMapView.zoom;
   
   // Neighbor-related state
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -640,7 +698,7 @@ export default function MapView({ target = '_self' }: MapViewProps = {}) {
           setAllNeighborsLoading(false);
         }
       });
-  }, [mapLayerSettings.nodeTypes, config?.lastSeen]);
+  }, [mapLayerSettings.nodeTypes, config?.lastSeen, config?.selectedRegion]);
 
   function isBoundsInside(inner: [[number, number], [number, number]], outer: [[number, number], [number, number]]) {
     // inner: [[minLat, minLng], [maxLat, maxLng]]
@@ -782,6 +840,7 @@ export default function MapView({ target = '_self' }: MapViewProps = {}) {
         className="bg-gray-200"
       >
         <InitialBoundsSetter />
+        <MapViewSync center={mapCenter} zoom={mapZoom} />
         <MapEventCatcher />
         <TileLayer
           attribution={selectedTileLayer.attribution}
