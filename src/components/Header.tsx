@@ -80,7 +80,7 @@ export default function Header({ configButtonRef }: HeaderProps) {
 
     const navWidth = navRef.current.offsetWidth;
     const rightSectionWidth = actionsRef.current?.offsetWidth ?? 200;
-    const availableWidth = navWidth - rightSectionWidth - 48; // 48px for padding
+    const availableWidth = navWidth - rightSectionWidth - 48 - 120; // 48px for padding
 
     // Create temporary elements to measure item widths
     const tempContainer = document.createElement('div');
