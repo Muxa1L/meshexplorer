@@ -226,7 +226,7 @@ export const ruMessages = {
     minPacketCount: "Минимальный порог пакетов",
     minPacketCountHelp: "Показывать только связи с числом пакетов не меньше указанного",
     tileLayer: "Подложка карты",
-    showWardriveOverlay: "Показывать wardrive-покрытие обнаружения",
+    showWardriveOverlay: "Показывать покрытие",
     resolution: "Разрешение (точность geohash)",
     refreshMapNodes: "Обновить узлы на карте",
     pathTraffic: "Трафик маршрутов",
