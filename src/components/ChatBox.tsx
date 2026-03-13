@@ -83,9 +83,7 @@ export default function ChatBox({
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
 
   const expandedScrollRef = useRef<HTMLDivElement>(null);
-  const previousExpandedMessageCountRef = useRef(0);
   const previousExpandedScrollHeightRef = useRef<number | null>(null);
-  const shouldStickToBottomRef = useRef(true);
 
   const selectedKey = allTabs[selectedTab];
   const channelId = selectedKey.isAllMessages
@@ -141,7 +139,6 @@ export default function ChatBox({
     const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
     const isNearBottom = distanceFromBottom <= 160;
 
-    shouldStickToBottomRef.current = isNearBottom;
     setShowJumpToLatest(!isNearBottom && expandedMessages.length > 0);
   }, [expandedMessages.length]);
 
@@ -177,17 +174,14 @@ export default function ChatBox({
     }
 
     previousExpandedScrollHeightRef.current = null;
-    previousExpandedMessageCountRef.current = 0;
-    shouldStickToBottomRef.current = true;
     setShowJumpToLatest(false);
 
     const frame = requestAnimationFrame(() => {
-      scrollToLatestMessage("auto");
       updateExpandedScrollState();
     });
 
     return () => cancelAnimationFrame(frame);
-  }, [config?.selectedRegion, isExpandedLayout, scrollToLatestMessage, selectedTab, updateExpandedScrollState]);
+  }, [config?.selectedRegion, isExpandedLayout, selectedTab, updateExpandedScrollState]);
 
   useEffect(() => {
     if (!isExpandedLayout || !config?.selectedRegion) {
@@ -197,21 +191,15 @@ export default function ChatBox({
     const frame = requestAnimationFrame(() => {
       const container = expandedScrollRef.current;
       if (!container) {
-        previousExpandedMessageCountRef.current = expandedMessages.length;
         return;
       }
-
-      const previousMessageCount = previousExpandedMessageCountRef.current;
 
       if (previousExpandedScrollHeightRef.current !== null) {
         const previousHeight = previousExpandedScrollHeightRef.current;
         previousExpandedScrollHeightRef.current = null;
         container.scrollTop += container.scrollHeight - previousHeight;
-      } else if (expandedMessages.length > previousMessageCount && shouldStickToBottomRef.current) {
-        container.scrollTo({ top: container.scrollHeight, behavior: "auto" });
       }
 
-      previousExpandedMessageCountRef.current = expandedMessages.length;
       updateExpandedScrollState();
     });
 
