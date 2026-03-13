@@ -50,9 +50,9 @@ export default function Header({ configButtonRef }: HeaderProps) {
   const measureAndLayout = useCallback(() => {
     // Define all navigation items
     const allNavItems: NavItem[] = [
+      { href: "/join", label: t("header.howToJoin") },
       { href: "/messages", label: t("header.messages") },
       { href: "/map", label: t("header.map") },
-      { href: "/join", label: t("header.howToJoin") },
       { href: "/packets", label: t("header.packets") },
       { href: "/stats", label: t("header.stats") },
       { href: "/packet-count", label: t("header.packetStats") },
