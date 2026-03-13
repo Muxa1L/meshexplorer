@@ -18,6 +18,7 @@ import {
   payloadPreview,
   type DecodedPayload,
 } from "@/lib/packet-decode";
+import { useLocale } from "./LocaleProvider";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -109,38 +110,40 @@ function Field({ label, value, mono = true, wide = false }: {
 // ---------------------------------------------------------------------------
 
 function DecodedSection({ decoded }: { decoded: DecodedPayload }) {
+  const { t } = useLocale();
+
   switch (decoded.type) {
     case "REQ":
       return (
         <div className="space-y-1.5">
-          <Field label="Dest hash" value={decoded.dest_hash} />
-          <Field label="Src hash"  value={decoded.src_hash} />
-          {decoded.encrypted && <Field label="Encrypted" value={decoded.encrypted} wide />}
+          <Field label={t("packetAnalyzer.destHash")} value={decoded.dest_hash} />
+          <Field label={t("packetAnalyzer.srcHash")}  value={decoded.src_hash} />
+          {decoded.encrypted && <Field label={t("packetAnalyzer.encrypted")} value={decoded.encrypted} wide />}
         </div>
       );
 
     case "RESPONSE":
       return (
         <div className="space-y-1.5">
-          <Field label="Dest hash" value={decoded.dest_hash} />
-          <Field label="Src hash"  value={decoded.src_hash} />
-          {decoded.encrypted && <Field label="Encrypted" value={decoded.encrypted} wide />}
+          <Field label={t("packetAnalyzer.destHash")} value={decoded.dest_hash} />
+          <Field label={t("packetAnalyzer.srcHash")}  value={decoded.src_hash} />
+          {decoded.encrypted && <Field label={t("packetAnalyzer.encrypted")} value={decoded.encrypted} wide />}
         </div>
       );
 
     case "TXT_MSG":
       return (
         <div className="space-y-1.5">
-          <Field label="Dest hash" value={decoded.dest_hash} />
-          <Field label="Src hash"  value={decoded.src_hash} />
-          {decoded.encrypted && <Field label="Encrypted" value={decoded.encrypted} wide />}
+          <Field label={t("packetAnalyzer.destHash")} value={decoded.dest_hash} />
+          <Field label={t("packetAnalyzer.srcHash")}  value={decoded.src_hash} />
+          {decoded.encrypted && <Field label={t("packetAnalyzer.encrypted")} value={decoded.encrypted} wide />}
         </div>
       );
 
     case "ACK":
       return (
         <div className="space-y-1.5">
-          <Field label="CRC-32" value={decoded.checksum} />
+          <Field label={t("packetAnalyzer.crc32")} value={decoded.checksum} />
         </div>
       );
 
@@ -148,15 +151,15 @@ function DecodedSection({ decoded }: { decoded: DecodedPayload }) {
       const ts = decoded.timestamp ? new Date(decoded.timestamp * 1000).toLocaleString() : "—";
       return (
         <div className="space-y-1.5">
-          <Field label="Role"      value={decoded.role} />
-          {decoded.name && <Field label="Name"  value={decoded.name} mono={false} />}
-          <Field label="Pub key"   value={decoded.pub_key} wide />
-          <Field label="Timestamp" value={ts} mono={false} />
-          <Field label="Flags"     value={`0x${decoded.flags.toString(16).toUpperCase().padStart(2, "0")}`} />
+          <Field label={t("packetAnalyzer.role")} value={decoded.role} />
+          {decoded.name && <Field label={t("packetAnalyzer.name")} value={decoded.name} mono={false} />}
+          <Field label={t("packetAnalyzer.pubKey")} value={decoded.pub_key} wide />
+          <Field label={t("packetAnalyzer.timestamp")} value={ts} mono={false} />
+          <Field label={t("packetAnalyzer.flags")} value={`0x${decoded.flags.toString(16).toUpperCase().padStart(2, "0")}`} />
           {decoded.has_location && decoded.lat !== undefined && (
             <>
-              <Field label="Latitude"  value={decoded.lat.toFixed(6)} />
-              <Field label="Longitude" value={decoded.lon!.toFixed(6)} />
+              <Field label={t("packetAnalyzer.latitude")} value={decoded.lat.toFixed(6)} />
+              <Field label={t("packetAnalyzer.longitude")} value={decoded.lon!.toFixed(6)} />
             </>
           )}
         </div>
@@ -166,48 +169,48 @@ function DecodedSection({ decoded }: { decoded: DecodedPayload }) {
     case "GRP_TXT":
       return (
         <div className="space-y-1.5">
-          <Field label="Channel hash" value={decoded.channel_hash} />
-          <Field label="MAC"          value={decoded.mac} />
-          <Field label="Ciphertext"   value={decoded.ciphertext} wide />
+          <Field label={t("packetAnalyzer.channelHash")} value={decoded.channel_hash} />
+          <Field label={t("packetAnalyzer.mac")} value={decoded.mac} />
+          <Field label={t("packetAnalyzer.ciphertext")} value={decoded.ciphertext} wide />
         </div>
       );
 
     case "GRP_DATA":
       return (
         <div className="space-y-1.5">
-          <Field label="Channel hash" value={decoded.channel_hash} />
-          <Field label="MAC"          value={decoded.mac} />
-          <Field label="Data"         value={decoded.data} wide />
+          <Field label={t("packetAnalyzer.channelHash")} value={decoded.channel_hash} />
+          <Field label={t("packetAnalyzer.mac")} value={decoded.mac} />
+          <Field label={t("packetAnalyzer.data")} value={decoded.data} wide />
         </div>
       );
 
     case "ANON_REQ":
       return (
         <div className="space-y-1.5">
-          <Field label="Dest hash"  value={decoded.dest_hash} />
-          <Field label="Src pubkey" value={decoded.src_pubkey} wide />
-          {decoded.encrypted && <Field label="Encrypted" value={decoded.encrypted} wide />}
+          <Field label={t("packetAnalyzer.destHash")} value={decoded.dest_hash} />
+          <Field label={t("packetAnalyzer.srcPubkey")} value={decoded.src_pubkey} wide />
+          {decoded.encrypted && <Field label={t("packetAnalyzer.encrypted")} value={decoded.encrypted} wide />}
         </div>
       );
 
     case "PATH":
       return (
         <div className="space-y-1.5">
-          <Field label="Dest hash" value={decoded.dest_hash} />
-          <Field label="Src hash"  value={decoded.src_hash} />
-          {decoded.encrypted && <Field label="Encrypted" value={decoded.encrypted} wide />}
+          <Field label={t("packetAnalyzer.destHash")} value={decoded.dest_hash} />
+          <Field label={t("packetAnalyzer.srcHash")} value={decoded.src_hash} />
+          {decoded.encrypted && <Field label={t("packetAnalyzer.encrypted")} value={decoded.encrypted} wide />}
         </div>
       );
 
     case "TRACE":
       return (
         <div className="space-y-1.5">
-          <Field label="Tag"       value={`0x${decoded.tag.toString(16).toUpperCase().padStart(8, "0")}`} />
-          <Field label="Flags"     value={`0x${decoded.flags.toString(16).toUpperCase().padStart(2, "0")}`} />
-          {decoded.auth_code !== 0 && <Field label="Auth code" value={decoded.auth_code.toString()} />}
+          <Field label={t("packetAnalyzer.tag")} value={`0x${decoded.tag.toString(16).toUpperCase().padStart(8, "0")}`} />
+          <Field label={t("packetAnalyzer.flags")} value={`0x${decoded.flags.toString(16).toUpperCase().padStart(2, "0")}`} />
+          {decoded.auth_code !== 0 && <Field label={t("packetAnalyzer.authCode")} value={decoded.auth_code.toString()} />}
           {decoded.path_hashes.length > 0 && (
             <div>
-              <span className="text-xs text-gray-400 dark:text-gray-500">Path ({decoded.path_hashes.length} hop{decoded.path_hashes.length !== 1 ? "s" : ""})</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500">{t("packetAnalyzer.path")} ({decoded.path_hashes.length} {t("packetAnalyzer.hop")}{decoded.path_hashes.length !== 1 ? "s" : ""})</span>
               <div className="flex flex-wrap gap-1.5 items-center mt-1">
                 {decoded.path_hashes.map((h, i) => (
                   <span key={i} className="flex items-center gap-1">
@@ -224,7 +227,7 @@ function DecodedSection({ decoded }: { decoded: DecodedPayload }) {
           )}
           {decoded.snrs.length > 0 && (
             <div>
-              <span className="text-xs text-gray-400 dark:text-gray-500">SNR per hop</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500">{t("packetAnalyzer.snrPerHop")}</span>
               <div className="flex flex-wrap gap-1.5 mt-1">
                 {decoded.snrs.map((snr, i) => (
                   <span key={i} className="font-mono text-xs px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-300">
@@ -235,7 +238,7 @@ function DecodedSection({ decoded }: { decoded: DecodedPayload }) {
             </div>
           )}
           {decoded.snrs.length === 0 && decoded.path_hashes.length > 0 && (
-            <span className="text-xs text-gray-400 dark:text-gray-500 italic">No SNR data yet (outbound)</span>
+            <span className="text-xs text-gray-400 dark:text-gray-500 italic">{t("packetAnalyzer.noSnrData")}</span>
           )}
         </div>
       );
@@ -243,7 +246,7 @@ function DecodedSection({ decoded }: { decoded: DecodedPayload }) {
     default:
       return (
         <div className="font-mono text-xs text-gray-500 dark:text-gray-400 break-all">
-          {decoded.data || "(no data)"}
+          {decoded.data || t("common.noDataAvailable")}
         </div>
       );
   }
@@ -256,6 +259,7 @@ function DecodedSection({ decoded }: { decoded: DecodedPayload }) {
 function PacketRow({ packet, isSelected, onClick }: {
   packet: MeshPacket; isSelected: boolean; onClick: () => void;
 }) {
+  const { t } = useLocale();
   const ptInfo = getPayloadType(packet.payload_type);
   const sender = packet.origin || (packet.origin_pubkey ? `<${packet.origin_pubkey.slice(0, 8)}…>` : "—");
 
@@ -284,7 +288,7 @@ function PacketRow({ packet, isSelected, onClick }: {
         {sender}
       </span>
       <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0 w-14 text-center">
-        {packet.path_len > 0 ? `${packet.path_len}h` : "direct"}
+        {packet.path_len > 0 ? `${packet.path_len}h` : t("packetAnalyzer.direct")}
       </span>
       <span className="text-xs text-gray-400 dark:text-gray-500 truncate flex-1 font-mono">
         {preview}
@@ -298,6 +302,7 @@ function PacketRow({ packet, isSelected, onClick }: {
 // ---------------------------------------------------------------------------
 
 function CopyButton({ text, title }: { text: string; title: string }) {
+  const { t } = useLocale();
   const [copied, setCopied] = useState(false);
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(text).then(() => {
@@ -312,7 +317,7 @@ function CopyButton({ text, title }: { text: string; title: string }) {
       title={title}
     >
       {copied
-        ? <span className="text-xs text-green-500 font-medium">Copied!</span>
+        ? <span className="text-xs text-green-500 font-medium">{t("packetAnalyzer.copied")}</span>
         : <ClipboardDocumentIcon className="w-3.5 h-3.5" />}
     </button>
   );
@@ -323,7 +328,8 @@ function CopyButton({ text, title }: { text: string; title: string }) {
 // ---------------------------------------------------------------------------
 
 function PathChain({ path }: { path: string }) {
-  if (!path) return <span className="text-gray-400 dark:text-gray-500 italic text-xs">No path</span>;
+  const { t } = useLocale();
+  if (!path) return <span className="text-gray-400 dark:text-gray-500 italic text-xs">{t("packetAnalyzer.noPath")}</span>;
   const hops = path.match(/.{1,2}/g) ?? [];
   return (
     <div className="flex flex-wrap gap-1.5 items-center mt-2">
@@ -371,6 +377,7 @@ function GroupHeader({ group, collapsed, onToggle }: {
 // ---------------------------------------------------------------------------
 
 function PacketDetail({ packet, onClose }: { packet: MeshPacket; onClose: () => void }) {
+  const { t } = useLocale();
   const ptInfo  = getPayloadType(packet.payload_type);
   const decoded = useMemo(
     () => decodePacket(packet.packet),
@@ -402,14 +409,14 @@ function PacketDetail({ packet, onClose }: { packet: MeshPacket; onClose: () => 
 
         {/* Timing */}
         <section>
-          <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Timing</h4>
+          <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">{t("packetAnalyzer.timing")}</h4>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <div className="bg-gray-50 dark:bg-neutral-800 rounded-lg p-3 border border-gray-200 dark:border-neutral-700">
-              <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Ingest Time</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t("packetAnalyzer.ingestTime")}</div>
               <div className="font-mono text-xs text-gray-900 dark:text-gray-100">{new Date(packet.ingest_timestamp).toLocaleString()}</div>
             </div>
             <div className="bg-gray-50 dark:bg-neutral-800 rounded-lg p-3 border border-gray-200 dark:border-neutral-700">
-              <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Mesh Time</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t("packetAnalyzer.meshTime")}</div>
               <div className="font-mono text-xs text-gray-900 dark:text-gray-100">
                 {packet.mesh_timestamp ? new Date(packet.mesh_timestamp).toLocaleString() : "—"}
               </div>
@@ -419,30 +426,30 @@ function PacketDetail({ packet, onClose }: { packet: MeshPacket; onClose: () => 
 
         {/* Origin */}
         <section>
-          <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Origin</h4>
+          <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">{t("packetAnalyzer.origin")}</h4>
           <div className="bg-gray-50 dark:bg-neutral-800 rounded-lg p-3 border border-gray-200 dark:border-neutral-700 space-y-2">
             {packet.origin && (
-              <Field label="Name" value={<span className="text-blue-600 dark:text-blue-400">{packet.origin}</span>} mono={false} />
+              <Field label={t("packetAnalyzer.name")} value={<span className="text-blue-600 dark:text-blue-400">{packet.origin}</span>} mono={false} />
             )}
-            <Field label="Pubkey" value={packet.origin_pubkey || "—"} />
-            <Field label="Source" value={`${packet.broker} / ${packet.topic}`} />
+            <Field label={t("packetAnalyzer.pubkey")} value={packet.origin_pubkey || "—"} />
+            <Field label={t("packetAnalyzer.source")} value={`${packet.broker} / ${packet.topic}`} />
           </div>
         </section>
 
         {/* Packet header */}
         <section>
-          <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Packet Info</h4>
+          <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">{t("packetAnalyzer.packetInfo")}</h4>
           <div className="bg-gray-50 dark:bg-neutral-800 rounded-lg p-3 border border-gray-200 dark:border-neutral-700 space-y-1.5">
-            <Field label="Payload Type" value={`${ptInfo.name} (0x${packet.payload_type.toString(16).toUpperCase()})`} />
-            <Field label="Route Type"   value={ROUTE_TYPES[packet.route_type] ?? `0x${packet.route_type.toString(16)}`} />
-            <Field label="Version"      value={String(packet.payload_version)} />
-            {packet.header && <Field label="Header" value={packet.header} />}
+            <Field label={t("packetAnalyzer.payloadType")} value={`${ptInfo.name} (0x${packet.payload_type.toString(16).toUpperCase()})`} />
+            <Field label={t("packetAnalyzer.routeType")} value={ROUTE_TYPES[packet.route_type] ?? `0x${packet.route_type.toString(16)}`} />
+            <Field label={t("packetAnalyzer.version")} value={String(packet.payload_version)} />
+            {packet.header && <Field label={t("packetAnalyzer.header")} value={packet.header} />}
           </div>
         </section>
 
         {/* Decoded payload */}
         <section>
-          <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Decoded</h4>
+          <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">{t("packetAnalyzer.decoded")}</h4>
           <div className="bg-gray-50 dark:bg-neutral-800 rounded-lg p-3 border border-gray-200 dark:border-neutral-700">
             <DecodedSection decoded={decoded} />
           </div>
@@ -450,11 +457,11 @@ function PacketDetail({ packet, onClose }: { packet: MeshPacket; onClose: () => 
 
         {/* Routing */}
         <section>
-          <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Routing</h4>
+          <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">{t("packetAnalyzer.routing")}</h4>
           <div className="bg-gray-50 dark:bg-neutral-800 rounded-lg p-3 border border-gray-200 dark:border-neutral-700">
             <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
-              <span>Type: {ROUTE_TYPES[packet.route_type] ?? `0x${packet.route_type.toString(16)}`}</span>
-              <span>Hops: {packet.path_len}</span>
+              <span>{t("packetAnalyzer.routingType")}: {ROUTE_TYPES[packet.route_type] ?? `0x${packet.route_type.toString(16)}`}</span>
+              <span>{t("packetAnalyzer.hopsLabel")}: {packet.path_len}</span>
             </div>
             <PathChain path={packet.path} />
             {packet.path && (
@@ -468,22 +475,22 @@ function PacketDetail({ packet, onClose }: { packet: MeshPacket; onClose: () => 
         {/* Payload hex */}
         <section>
           <div className="flex items-center justify-between mb-2">
-            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Payload (hex)</h4>
-            <CopyButton text={packet.payload} title="Copy payload hex" />
+            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t("packetAnalyzer.payloadHex")}</h4>
+            <CopyButton text={packet.payload} title={t("packetAnalyzer.copyPayloadHex")} />
           </div>
           <div className="bg-gray-100 dark:bg-neutral-950 rounded-lg p-3 border border-gray-200 dark:border-neutral-800 font-mono text-xs text-gray-600 dark:text-gray-400 break-all leading-relaxed">
-            {packet.payload || "(empty)"}
+            {packet.payload || t("packetAnalyzer.empty")}
           </div>
         </section>
 
         {/* Raw packet hex */}
         <section>
           <div className="flex items-center justify-between mb-2">
-            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Raw Packet (hex)</h4>
-            <CopyButton text={packet.packet} title="Copy raw packet hex" />
+            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t("packetAnalyzer.rawPacketHex")}</h4>
+            <CopyButton text={packet.packet} title={t("packetAnalyzer.copyRawPacketHex")} />
           </div>
           <div className="bg-gray-100 dark:bg-neutral-950 rounded-lg p-3 border border-gray-200 dark:border-neutral-800 font-mono text-xs text-gray-600 dark:text-gray-400 break-all leading-relaxed">
-            {packet.packet || "(empty)"}
+            {packet.packet || t("packetAnalyzer.empty")}
           </div>
         </section>
       </div>
@@ -496,6 +503,7 @@ function PacketDetail({ packet, onClose }: { packet: MeshPacket; onClose: () => 
 // ---------------------------------------------------------------------------
 
 export default function PacketAnalyzer() {
+  const { t } = useLocale();
   const [selectedPacket, setSelectedPacket]   = useState<MeshPacket | null>(null);
   const [filterType, setFilterType]           = useState<number | null>(null);
   const [autoRefresh, setAutoRefresh]         = useState(true);
@@ -516,7 +524,7 @@ export default function PacketAnalyzer() {
     queryFn: async ({ signal }) => {
       const params = new URLSearchParams({ limit: String(limit) });
       const res = await fetch(buildApiUrl(`/api/packets?${params}`), { signal });
-      if (!res.ok) throw new Error("Failed to fetch packets");
+      if (!res.ok) throw new Error(t("packetAnalyzer.failedToLoadPackets"));
       return res.json() as Promise<{ packets: MeshPacket[] }>;
     },
     refetchInterval: autoRefresh ? 5000 : false,
@@ -561,7 +569,7 @@ export default function PacketAnalyzer() {
     <div className="flex flex-col h-full bg-white dark:bg-neutral-900">
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 flex-shrink-0">
-        <h2 className="font-semibold text-gray-900 dark:text-gray-100 flex-shrink-0 mr-1">Packet Analyzer</h2>
+        <h2 className="font-semibold text-gray-900 dark:text-gray-100 flex-shrink-0 mr-1">{t("packetAnalyzer.title")}</h2>
         <div className="flex items-center gap-1.5 flex-wrap flex-1">
           <button
             onClick={() => setFilterType(null)}
@@ -571,7 +579,7 @@ export default function PacketAnalyzer() {
                 : "bg-gray-100 dark:bg-neutral-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-neutral-700"
             }`}
           >
-            All ({packets.length})
+            {t("packetAnalyzer.all")} ({packets.length})
           </button>
           {typeButtons.map(pt => {
             const info = getPayloadType(pt);
@@ -598,10 +606,10 @@ export default function PacketAnalyzer() {
                 ? "bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300"
                 : "bg-gray-100 dark:bg-neutral-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-neutral-700"
             }`}
-            title="Toggle grouping"
+            title={t("packetAnalyzer.toggleGrouping")}
           >
             <RectangleGroupIcon className="w-3.5 h-3.5" />
-            {groupMode ? `${groups.length} groups` : "Group"}
+            {groupMode ? t("packetAnalyzer.groups", { count: groups.length }) : t("packetAnalyzer.group")}
           </button>
           <button
             onClick={() => setAutoRefresh(r => !r)}
@@ -611,13 +619,13 @@ export default function PacketAnalyzer() {
                 : "bg-gray-100 dark:bg-neutral-800 text-gray-500 dark:text-gray-400"
             }`}
           >
-            {autoRefresh ? "Live" : "Paused"}
+            {autoRefresh ? t("packetAnalyzer.live") : t("packetAnalyzer.paused")}
           </button>
           <button
             onClick={() => refetch()}
             disabled={isFetching}
             className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-neutral-800 text-gray-500 dark:text-gray-400 disabled:opacity-50 transition-colors"
-            title="Refresh"
+            title={t("packetAnalyzer.refresh")}
           >
             <ArrowPathIcon className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
           </button>
@@ -629,19 +637,19 @@ export default function PacketAnalyzer() {
         {/* Packet list */}
         <div className={`flex flex-col min-h-0 border-r border-gray-200 dark:border-neutral-700 ${selectedPacket ? "w-[55%]" : "w-full"}`}>
           <div className="flex items-center gap-3 px-3 py-1.5 border-b border-gray-200 dark:border-neutral-700 bg-gray-50 dark:bg-neutral-800 text-xs font-medium text-gray-500 dark:text-gray-400 flex-shrink-0">
-            <span className="w-20 flex-shrink-0">Time</span>
-            <span className="w-20 flex-shrink-0">Type</span>
-            <span className="w-28 flex-shrink-0">Sender</span>
-            <span className="w-14 flex-shrink-0 text-center">Hops</span>
-            <span className="flex-1">Preview</span>
+            <span className="w-20 flex-shrink-0">{t("packetAnalyzer.time")}</span>
+            <span className="w-20 flex-shrink-0">{t("packetAnalyzer.type")}</span>
+            <span className="w-28 flex-shrink-0">{t("packetAnalyzer.sender")}</span>
+            <span className="w-14 flex-shrink-0 text-center">{t("packetAnalyzer.hops")}</span>
+            <span className="flex-1">{t("packetAnalyzer.preview")}</span>
           </div>
           <div className="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-neutral-800">
             {isLoading ? (
-              <div className="flex items-center justify-center h-24 text-sm text-gray-500 dark:text-gray-400">Loading packets…</div>
+              <div className="flex items-center justify-center h-24 text-sm text-gray-500 dark:text-gray-400">{t("packetAnalyzer.loadingPackets")}</div>
             ) : error ? (
-              <div className="flex items-center justify-center h-24 text-sm text-red-500 dark:text-red-400">Failed to load packets</div>
+              <div className="flex items-center justify-center h-24 text-sm text-red-500 dark:text-red-400">{t("packetAnalyzer.failedToLoadPackets")}</div>
             ) : filteredPackets.length === 0 ? (
-              <div className="flex items-center justify-center h-24 text-sm text-gray-500 dark:text-gray-400">No packets found</div>
+              <div className="flex items-center justify-center h-24 text-sm text-gray-500 dark:text-gray-400">{t("packetAnalyzer.noPacketsFound")}</div>
             ) : groupMode ? (
               groups.map(group => (
                 <div key={group.key}>

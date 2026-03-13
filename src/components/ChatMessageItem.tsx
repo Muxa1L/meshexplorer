@@ -6,6 +6,7 @@ import PathVisualization from "./PathVisualization";
 import { PathData } from "@/lib/pathUtils";
 import NodeLinkWithHover from "./NodeLinkWithHover";
 import { findNodeMentions } from "@/lib/node-utils";
+import { useLocale } from "./LocaleProvider";
 
 export interface ChatMessage {
   message_id: string;
@@ -107,6 +108,7 @@ function ChatMessageContent({ text }: { text: string }) {
 
 function ChatMessageItem({ msg, showErrorRow }: { msg: ChatMessage, showErrorRow?: boolean }) {
   const { config } = useConfig();
+  const { t } = useLocale();
   const knownKeys = useMemo(() => [
     ...(config?.meshcoreKeys?.map((k: any) => k.privateKey) || []),
     "izOH6cXN6mrJ5e26oRXNcg==", // Always include public key
@@ -144,8 +146,8 @@ function ChatMessageItem({ msg, showErrorRow }: { msg: ChatMessage, showErrorRow
       <div className="border-b border-gray-200 dark:border-neutral-800 pb-2 mb-2">
         <div className="text-xs text-gray-400 flex items-center gap-2">
           {formatLocalTime(new Date(parsed.timestamp * 1000).toISOString())}
-          <span className="text-xs text-gray-500">type: {parsed.msgType}</span>
-          <span className="text-xs text-gray-500 ml-2">channel: {msg.channel_hash}</span>
+          <span className="text-xs text-gray-500">{t("chatMessage.type")}: {parsed.msgType}</span>
+          <span className="text-xs text-gray-500 ml-2">{t("chatMessage.channel")}: {msg.channel_hash}</span>
         </div>
         <div className="break-words whitespace-pre-wrap">
           {parsed.sender ? (
@@ -161,7 +163,7 @@ function ChatMessageItem({ msg, showErrorRow }: { msg: ChatMessage, showErrorRow
         </div>
         <PathVisualization 
           paths={pathData} 
-          title={`Heard ${pathData.length} repeat${pathData.length !== 1 ? 's' : ''}`}
+          title={t("chatMessage.heardRepeats", { count: pathData.length })}
           className="text-xs"
           packetHash={msg.message_id}
         />
@@ -175,14 +177,14 @@ function ChatMessageItem({ msg, showErrorRow }: { msg: ChatMessage, showErrorRow
         <div className="border-b border-red-200 dark:border-red-800 pb-2 mb-2 bg-red-50 dark:bg-red-900/30">
           <div className="text-xs text-gray-400 flex items-center gap-2">
             {formatLocalTime(msg.ingest_timestamp)}
-            <span className="text-xs text-gray-500 ml-2">channel: {msg.channel_hash}</span>
+            <span className="text-xs text-gray-500 ml-2">{t("chatMessage.channel")}: {msg.channel_hash}</span>
           </div>
           <div className="text-xs text-red-600 dark:text-red-300">
             {error}
           </div>
           <PathVisualization 
             paths={pathData} 
-            title={`Heard ${pathData.length} repeat${pathData.length !== 1 ? 's' : ''}`}
+            title={t("chatMessage.heardRepeats", { count: pathData.length })}
             className="text-xs"
             packetHash={msg.message_id}
           />
@@ -198,12 +200,12 @@ function ChatMessageItem({ msg, showErrorRow }: { msg: ChatMessage, showErrorRow
       <div className="border-b border-gray-200 dark:border-neutral-800 pb-2 mb-2">
         <div className="text-xs text-gray-400 flex items-center gap-2">
           {formatLocalTime(msg.ingest_timestamp)}
-          <span className="text-xs text-gray-500 ml-2">channel: {msg.channel_hash}</span>
+          <span className="text-xs text-gray-500 ml-2">{t("chatMessage.channel")}: {msg.channel_hash}</span>
         </div>
         <div className="w-full h-5 bg-gray-200 dark:bg-neutral-800 rounded animate-pulse my-2" />
         <PathVisualization 
           paths={pathData} 
-          title={`Heard ${pathData.length} repeat${pathData.length !== 1 ? 's' : ''}`}
+          title={t("chatMessage.heardRepeats", { count: pathData.length })}
           className="text-xs"
           packetHash={msg.message_id}
         />

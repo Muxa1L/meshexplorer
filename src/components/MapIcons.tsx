@@ -3,6 +3,7 @@ import moment from "moment";
 import { formatPublicKey } from '@/lib/meshcore';
 import { getNameIconLabel } from '@/lib/meshcore-map-nodeutils';
 import { NodePosition } from '@/types/map';
+import { messages, type Locale } from '@/i18n/messages';
 
 interface NodeMarkerProps {
   node: NodePosition;
@@ -149,30 +150,38 @@ export function ClusterMarker({ children }: ClusterMarkerProps) {
 
 // Popup content component
 export function PopupContent({ node, target = '_self' }: PopupContentProps) {
+  const locale = (moment.locale() === 'ru' ? 'ru' : 'en') as Locale;
+  const t = (key: string) => {
+    const parts = key.split('.');
+    let current: any = messages[locale];
+    for (const part of parts) current = current?.[part];
+    return typeof current === 'string' ? current : key;
+  };
+
   return (
     <div>
-      <div><b>ID:</b> {node.type === "meshcore" ? formatPublicKey(node.node_id) : node.node_id}</div>
-      <div><b>Full Name:</b> {node.name ?? "-"}</div>
-      <div><b>Short Name:</b> {node.type === "meshcore" && node.short_name ? getNameIconLabel(node.name || node.short_name) : (node.short_name ?? "-")}</div>
-      <div><b>Type:</b> {node.type ?? "-"}</div>
-      <div><b>Lat:</b> {node.latitude}</div>
-      <div><b>Lng:</b> {node.longitude}</div>
-      <div><b>Alt:</b> {node.altitude !== undefined ? node.altitude : "-"}</div>
+      <div><b>{t("mapPopup.id")}:</b> {node.type === "meshcore" ? formatPublicKey(node.node_id) : node.node_id}</div>
+      <div><b>{t("mapPopup.fullName")}:</b> {node.name ?? "-"}</div>
+      <div><b>{t("mapPopup.shortName")}:</b> {node.type === "meshcore" && node.short_name ? getNameIconLabel(node.name || node.short_name) : (node.short_name ?? "-")}</div>
+      <div><b>{t("mapPopup.type")}:</b> {node.type ?? "-"}</div>
+      <div><b>{t("mapPopup.lat")}:</b> {node.latitude}</div>
+      <div><b>{t("mapPopup.lng")}:</b> {node.longitude}</div>
+      <div><b>{t("mapPopup.alt")}:</b> {node.altitude !== undefined ? node.altitude : "-"}</div>
       {node.last_seen ? (
         <div>
-          <b>Last seen:</b> {moment.utc(node.last_seen).format('YYYY-MM-DD HH:mm:ss')} <span style={{color: '#888'}}>(UTC)</span><br/>
+          <b>{t("mapPopup.lastSeen")}:</b> {moment.utc(node.last_seen).format('YYYY-MM-DD HH:mm:ss')} <span style={{color: '#888'}}>(UTC)</span><br/>
           <span style={{color: '#888'}}>{moment.utc(node.last_seen).local().fromNow()}</span>
         </div>
       ) : (
-        <div><b>Last seen:</b> -</div>
+        <div><b>{t("mapPopup.lastSeen")}:</b> -</div>
       )}
       {node.first_seen ? (
         <div>
-          <b>First seen:</b> {moment.utc(node.first_seen).format('YYYY-MM-DD HH:mm:ss')} <span style={{color: '#888'}}>(UTC)</span><br/>
+          <b>{t("mapPopup.firstSeen")}:</b> {moment.utc(node.first_seen).format('YYYY-MM-DD HH:mm:ss')} <span style={{color: '#888'}}>(UTC)</span><br/>
           <span style={{color: '#888'}}>{moment.utc(node.first_seen).local().fromNow()}</span>
         </div>
       ) : (
-        <div><b>First seen:</b> -</div>
+        <div><b>{t("mapPopup.firstSeen")}:</b> -</div>
       )}
       {node.type === "meshcore" && (
         <div style={{marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #e5e7eb'}}>
@@ -192,7 +201,7 @@ export function PopupContent({ node, target = '_self' }: PopupContentProps) {
             onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
             onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
           >
-            View Node Details →
+            {t("mapPopup.viewNodeDetails")}
           </a>
         </div>
       )}

@@ -7,6 +7,7 @@ import { Popover } from 'react-tiny-popover';
 import { useMeshcoreSearch } from '@/hooks/useMeshcoreSearch';
 import { useConfig } from '@/components/ConfigContext';
 import NodeCard from '@/components/NodeCard';
+import { useLocale } from './LocaleProvider';
 
 interface NodeLinkWithHoverProps {
   nodeName: string;
@@ -24,6 +25,7 @@ export default function NodeLinkWithHover({
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [isWaitingForSearch, setIsWaitingForSearch] = useState(false);
   const { config } = useConfig();
+  const { t } = useLocale();
   const router = useRouter();
 
   // Search query - enabled immediately when component mounts
@@ -103,12 +105,12 @@ export default function NodeLinkWithHover({
         {isSearchLoading ? (
           <div className="p-4 text-center w-80">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Searching for {nodeName}...</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">{t("hoverSearch.searching", { nodeName })}</p>
           </div>
         ) : searchError ? (
           <div className="p-4 text-center w-80">
-            <p className="text-sm text-red-600 dark:text-red-400">Search error</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Click to search manually</p>
+            <p className="text-sm text-red-600 dark:text-red-400">{t("hoverSearch.searchError")}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t("hoverSearch.clickToSearch")}</p>
           </div>
         ) : foundNode ? (
           <NodeCard 
@@ -118,15 +120,15 @@ export default function NodeLinkWithHover({
           />
         ) : searchResults.length === 0 ? (
           <div className="p-4 text-center w-80">
-            <p className="text-sm text-gray-600 dark:text-gray-400">No node found for &quot;{nodeName}&quot;</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">The node may need to advert to appear</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">{t("hoverSearch.noNodeFound", { nodeName })}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t("hoverSearch.advertHint")}</p>
           </div>
         ) : (
           <div className="p-4 text-center w-80">
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              {searchResults.length} nodes found for &quot;{nodeName}&quot;
+              {t("hoverSearch.nodesFound", { nodeName, count: searchResults.length })}
             </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Click to see all results</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t("hoverSearch.clickToSeeAll")}</p>
           </div>
         )}
 
@@ -134,7 +136,7 @@ export default function NodeLinkWithHover({
           <div className="absolute inset-0 bg-white/80 dark:bg-neutral-800/80 flex items-center justify-center">
             <div className="text-center">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Navigating...</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{t("hoverSearch.navigating")}</p>
             </div>
           </div>
         )}

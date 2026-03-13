@@ -1,5 +1,6 @@
 "use client";
 import { useConfig } from "./ConfigContext";
+import { useLocale } from "./LocaleProvider";
 import { getRegionFriendlyNames } from "@/lib/regions";
 
 interface RegionSelectorProps {
@@ -9,6 +10,7 @@ interface RegionSelectorProps {
 
 export default function RegionSelector({ onRegionSelected, className = "" }: RegionSelectorProps) {
   const { config, setConfig } = useConfig();
+  const { t } = useLocale();
   const regions = getRegionFriendlyNames();
 
   const handleRegionSelect = (regionName: string) => {
@@ -22,9 +24,9 @@ export default function RegionSelector({ onRegionSelected, className = "" }: Reg
     <div className={`bg-white dark:bg-neutral-900 ${className}`}>
       <div className="text-center mb-6">
         <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-2">
-          Select a Chat Region
+          {t("regionSelector.title")}
         </h2>
-        <p className="text-gray-600 dark:text-gray-300">Choose a region to filter chat messages</p>
+        <p className="text-gray-600 dark:text-gray-300">{t("regionSelector.description")}</p>
       </div>
 
       <div className="grid gap-3">
@@ -36,8 +38,8 @@ export default function RegionSelector({ onRegionSelected, className = "" }: Reg
           >
             <div className="font-medium text-gray-800 dark:text-gray-100">{friendlyName}</div>
             <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              {name === "krasnodar_pub" && "Broker: 192.168.1.20, Base topic: meshcore/krr_pb"}
-              {name === "stavropol" && "Broker: 192.168.1.20, Base topic: meshcore/stv"}
+              {name === "krasnodar_pub" && `${t("regionSelector.broker")}: 192.168.1.20, ${t("regionSelector.baseTopic")}: meshcore/krr_pb`}
+              {name === "stavropol" && `${t("regionSelector.broker")}: 192.168.1.20, ${t("regionSelector.baseTopic")}: meshcore/stv`}
             </div>
           </button>
         ))}
@@ -45,7 +47,7 @@ export default function RegionSelector({ onRegionSelected, className = "" }: Reg
 
       <div className="mt-6 text-center">
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          You can change this selection later in the Settings menu
+          {t("regionSelector.footer")}
         </p>
       </div>
     </div>

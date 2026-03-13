@@ -10,6 +10,7 @@ import { getRegionConfig } from "@/lib/regions";
 import { useChatMessages } from "@/hooks/useChatMessages";
 import { useIntersectionObserver } from "@/hooks/useIntersectionObserver";
 import { useQueryParams } from "@/hooks/useQueryParams";
+import { useLocale } from "./LocaleProvider";
 
 
 interface ChatBoxProps {
@@ -33,6 +34,7 @@ export default function ChatBox({
   className = "",
   startExpanded = false,
 }: ChatBoxProps) {
+  const { t } = useLocale();
   const { config, openKeyModal } = useConfig();
   const meshcoreKeys: TabItem[] = [
     { channelName: "Public", privateKey: "izOH6cXN6mrJ5e26oRXNcg==" },
@@ -41,7 +43,7 @@ export default function ChatBox({
 
   // Add "All Messages" tab if requested
   const allTabs: TabItem[] = showAllMessagesTab
-    ? [{ channelName: "All Messages", privateKey: "", isAllMessages: true }, ...meshcoreKeys]
+    ? [{ channelName: t("chatBox.allMessages"), privateKey: "", isAllMessages: true }, ...meshcoreKeys]
     : meshcoreKeys;
 
   // Use query params to persist selected tab across navigation
@@ -118,7 +120,7 @@ export default function ChatBox({
       >
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <span className="font-semibold text-gray-800 dark:text-gray-100 whitespace-nowrap flex-shrink-0">
-            MeshCore Chat
+            {t("chatBox.title")}
           </span>
           <span
             className="text-xs text-gray-500 dark:text-gray-400 truncate"
@@ -133,15 +135,15 @@ export default function ChatBox({
               onClick={handleRefresh}
               loading={isRefreshing}
               small={true}
-              title="Refresh chat messages"
-              ariaLabel="Refresh chat messages"
+              title={t("chatBox.refreshMessages")}
+              ariaLabel={t("chatBox.refreshMessages")}
             />
           )}
           {!startExpanded && (
             <button
               className="p-1 rounded text-gray-800 dark:text-gray-100 hover:bg-neutral-100 dark:hover:bg-neutral-800"
               onClick={() => setMinimized((m) => !m)}
-              aria-label={minimized ? "Maximize MeshCore Chat" : "Minimize MeshCore Chat"}
+              aria-label={minimized ? t("chatBox.maximize") : t("chatBox.minimize")}
             >
               {minimized ? <PlusIcon className="h-5 w-5" /> : <MinusIcon className="h-5 w-5" />}
             </button>
@@ -173,7 +175,7 @@ export default function ChatBox({
               <button
                 className="px-2 py-1 text-xs rounded-t whitespace-nowrap flex-shrink-0 bg-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800"
                 onClick={() => openKeyModal()}
-                title="Manage channel keys"
+                title={t("chatBox.manageChannelKeys")}
               >
                 +
               </button>
@@ -188,7 +190,7 @@ export default function ChatBox({
              <div className={`p-4 ${startExpanded ? "flex flex-col gap-2" : "flex flex-col gap-2"}`}>
                {messages.length === 0 && !loading && (
                  <div className={`text-gray-400 text-center ${startExpanded ? "py-8" : "mt-8"}`}>
-                   No chat messages found.
+                   {t("chatBox.noMessages")}
                  </div>
                )}
                

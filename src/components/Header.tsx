@@ -4,6 +4,7 @@ import { Cog6ToothIcon, InformationCircleIcon, ChevronDownIcon, SunIcon, MoonIco
 import { useConfig } from "./ConfigContext";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import InfoModal from "./InfoModal";
+import { useLocale } from "./LocaleProvider";
 import { getAppName } from "@/lib/api";
 import { useTheme } from "./ThemeProvider";
 
@@ -35,6 +36,7 @@ const THEME_LABEL = {
 export default function Header({ configButtonRef }: HeaderProps) {
   const { openConfig, configButtonRef: contextButtonRef } = useConfig();
   const { theme, setTheme } = useTheme();
+  const { locale, setLocale, t } = useLocale();
   const [infoModalOpen, setInfoModalOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [visibleItems, setVisibleItems] = useState<NavItem[]>([]);
@@ -48,12 +50,12 @@ export default function Header({ configButtonRef }: HeaderProps) {
   const measureAndLayout = useCallback(() => {
     // Define all navigation items
     const allNavItems: NavItem[] = [
-      { href: "/messages", label: "Messages" },
-      { href: "/packets", label: "Packets" },
-      { href: "/stats", label: "Stats" },
-      { href: "/packet-count", label: "Packet stats" },
-      { href: "/search", label: "Search" },
-      { href: "/api-docs", label: "API Docs" },
+      { href: "/messages", label: t("header.messages") },
+      { href: "/packets", label: t("header.packets") },
+      { href: "/stats", label: t("header.stats") },
+      { href: "/packet-count", label: t("header.packetStats") },
+      { href: "/search", label: t("header.search") },
+      { href: "/api-docs", label: t("header.apiDocs") },
       // { href: "/wardrive", label: "Wardrive" },
       // { href: "/coverage", label: "Coverage" },
     ];
@@ -106,7 +108,13 @@ export default function Header({ configButtonRef }: HeaderProps) {
 
     setVisibleItems(visible);
     setHiddenItems(hidden);
-  }, []);
+  }, [t]);
+
+  const themeLabel = THEME_LABEL[theme] === "Light"
+    ? t("header.themeLight")
+    : THEME_LABEL[theme] === "Dark"
+      ? t("header.themeDark")
+      : t("header.themeSystem");
 
   // Handle window resize
   useEffect(() => {
@@ -152,9 +160,9 @@ export default function Header({ configButtonRef }: HeaderProps) {
                 <button
                   onClick={() => setDropdownOpen(!dropdownOpen)}
                   className="flex items-center gap-1 text-gray-800 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                  aria-label="More navigation options"
+                  aria-label={t("header.moreNavigationOptions")}
                 >
-                  More
+                  {t("header.more")}
                   <ChevronDownIcon className="h-4 w-4" />
                 </button>
                 {dropdownOpen && (
@@ -176,34 +184,52 @@ export default function Header({ configButtonRef }: HeaderProps) {
           </div>
         </nav>
         <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="hidden sm:flex items-center gap-1 rounded border border-gray-200 dark:border-neutral-700 p-1">
+            <button
+              onClick={() => setLocale("en")}
+              className={`px-2 py-1 text-xs rounded ${locale === "en" ? "bg-blue-600 text-white" : "text-gray-700 dark:text-gray-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"}`}
+              aria-label={t("common.english")}
+              title={t("common.english")}
+            >
+              EN
+            </button>
+            <button
+              onClick={() => setLocale("ru")}
+              className={`px-2 py-1 text-xs rounded ${locale === "ru" ? "bg-blue-600 text-white" : "text-gray-700 dark:text-gray-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"}`}
+              aria-label={t("common.russian")}
+              title={t("common.russian")}
+            >
+              RU
+            </button>
+          </div>
           <button
             onClick={() => {
               const next = THEME_CYCLE[(THEME_CYCLE.indexOf(theme) + 1) % THEME_CYCLE.length];
               setTheme(next);
             }}
             className="flex items-center gap-2 px-3 py-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800"
-            aria-label={`Switch theme (current: ${THEME_LABEL[theme]})`}
-            title={`Theme: ${THEME_LABEL[theme]}`}
+            aria-label={t("header.switchTheme", { theme: themeLabel })}
+            title={t("header.themeTitle", { theme: themeLabel })}
           >
             {(() => { const Icon = THEME_ICON[theme]; return <Icon className="h-6 w-6" />; })()}
-            <span className="hidden sm:inline">{THEME_LABEL[theme]}</span>
+            <span className="hidden sm:inline">{themeLabel}</span>
           </button>
           <button
             onClick={() => setInfoModalOpen(true)}
             className="flex items-center gap-2 px-3 py-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800"
-            aria-label={`Open information about ${getAppName()}`}
+            aria-label={t("header.openInfo", { appName: getAppName() })}
           >
             <InformationCircleIcon className="h-6 w-6" />
-            <span className="hidden sm:inline">Info</span>
+            <span className="hidden sm:inline">{t("common.info")}</span>
           </button>
           <button
             ref={configButtonRef || contextButtonRef}
             onClick={openConfig}
             className="flex items-center gap-2 px-3 py-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800"
-            aria-label="Open settings menu"
+            aria-label={t("header.openSettings")}
           >
             <Cog6ToothIcon className="h-6 w-6" />
-            <span className="hidden sm:inline">Settings</span>
+            <span className="hidden sm:inline">{t("common.settings")}</span>
           </button>
         </div>
       </header>

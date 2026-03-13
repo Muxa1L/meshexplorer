@@ -4,9 +4,11 @@ import { useConfig } from "@/components/ConfigContext";
 import { getRegionConfig } from "@/lib/regions";
 import PacketCountChart from "@/components/PacketCountChart";
 import Link from "next/link";
+import { useLocale } from "@/components/LocaleProvider";
 
 export default function PacketCountPage() {
   const { config } = useConfig();
+  const { t } = useLocale();
   const region = config?.selectedRegion;
 
   // Get the friendly name for the selected region
@@ -22,9 +24,9 @@ export default function PacketCountPage() {
             href="/stats"
             className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-2 inline-block"
           >
-            ← Back to Stats
+            {t("packetCount.backToStats")}
           </Link>
-          <h1 className="text-2xl font-bold">Packet Count by Type</h1>
+          <h1 className="text-2xl font-bold">{t("packetCount.title")}</h1>
         </div>
         {regionFriendlyName && (
           <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -34,7 +36,7 @@ export default function PacketCountPage() {
       </div>
 
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-        View packet count statistics grouped by type over a selectable time period. Click legend items to show/hide series.
+        {t("packetCount.description")}
       </p>
 
       <PacketCountChart region={region} />

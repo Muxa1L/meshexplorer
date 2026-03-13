@@ -4,6 +4,7 @@ import { useState } from "react";
 import moment from "moment";
 import PathVisualization from "./PathVisualization";
 import { PathData } from "@/lib/pathUtils";
+import { useLocale } from "./LocaleProvider";
 
 interface AdvertDetailsProps {
   advert: {
@@ -25,6 +26,7 @@ interface AdvertDetailsProps {
 
 export default function AdvertDetails({ advert, initiatingNodeKey }: AdvertDetailsProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { t } = useLocale();
 
   const timeRange = advert.earliest_timestamp !== advert.latest_timestamp 
     ? `to ${moment.utc(advert.latest_timestamp).format('HH:mm:ss')}` : '';
@@ -45,7 +47,7 @@ export default function AdvertDetails({ advert, initiatingNodeKey }: AdvertDetai
               {timeRange}
             </div>
             <div className="text-sm text-gray-500 dark:text-gray-400">
-              Heard {advert.advert_count} time{advert.advert_count !== 1 ? 's' : ''}
+              {t("advert.heardTimes", { count: advert.advert_count })}
             </div>
           </div>
           <div className="flex items-center space-x-2">
@@ -107,7 +109,7 @@ export default function AdvertDetails({ advert, initiatingNodeKey }: AdvertDetai
             {advert.has_location && advert.latitude && advert.longitude && (
               <div>
                 <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
-                  Location
+                  {t("advert.location")}
                 </h4>
                 <div className="text-sm text-gray-600 dark:text-gray-300">
                   {advert.latitude.toFixed(6)}, {advert.longitude.toFixed(6)}
@@ -118,18 +120,18 @@ export default function AdvertDetails({ advert, initiatingNodeKey }: AdvertDetai
             {/* Timestamp details */}
             <div>
               <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
-                Timestamps
+                {t("advert.timestamps")}
               </h4>
               <div className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
                 <div>
-                  <span className="font-medium">Earliest:</span> {moment.utc(advert.earliest_timestamp).format('YYYY-MM-DD HH:mm:ss')} UTC
+                  <span className="font-medium">{t("advert.earliest")}:</span> {moment.utc(advert.earliest_timestamp).format('YYYY-MM-DD HH:mm:ss')} UTC
                 </div>
                 <div>
-                  <span className="font-medium">Latest:</span> {moment.utc(advert.latest_timestamp).format('YYYY-MM-DD HH:mm:ss')} UTC
+                  <span className="font-medium">{t("advert.latest")}:</span> {moment.utc(advert.latest_timestamp).format('YYYY-MM-DD HH:mm:ss')} UTC
                 </div>
                 {advert.earliest_timestamp !== advert.latest_timestamp && (
                   <div>
-                    <span className="font-medium">Duration:</span> {moment.utc(advert.latest_timestamp).diff(moment.utc(advert.earliest_timestamp), 'seconds')} seconds
+                    <span className="font-medium">{t("advert.duration")}:</span> {moment.utc(advert.latest_timestamp).diff(moment.utc(advert.earliest_timestamp), 'seconds')} {t("advert.seconds")}
                   </div>
                 )}
               </div>
@@ -138,27 +140,27 @@ export default function AdvertDetails({ advert, initiatingNodeKey }: AdvertDetai
             {/* Node capabilities */}
             <div>
               <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
-                Node Capabilities
+                {t("advert.nodeCapabilities")}
               </h4>
               <div className="flex flex-wrap gap-2">
                 {advert.is_repeater && (
                   <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                    Repeater
+                    {t("advert.repeater")}
                   </span>
                 ) || null}
                 {advert.is_chat_node && (
                   <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                    Companion
+                    {t("advert.companion")}
                   </span>
                 ) || null}
                 {advert.is_room_server && (
                   <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
-                    Room Server
+                    {t("advert.roomServer")}
                   </span>
                 ) || null}
                 {!advert.is_repeater && !advert.is_chat_node && !advert.is_room_server && (
                   <span className="text-sm text-gray-500 dark:text-gray-400">
-                    Unknown
+                    {t("advert.unknown")}
                   </span>
                 ) || null}
               </div>

@@ -19,6 +19,7 @@ import { useNeighbors, type Neighbor } from "@/hooks/useNeighbors";
 import { type AllNeighborsConnection } from "@/hooks/useAllNeighbors";
 import { useQueryParams } from "@/hooks/useQueryParams";
 import WardriveCoverageLayer from "@/components/WardriveCoverageLayer";
+import { useLocale } from "./LocaleProvider";
 
 const DEFAULT = {
   lat: 45.02756 , // Center between Seattle and Portland
@@ -479,6 +480,7 @@ interface MapViewProps {
 }
 
 export default function MapView({ target = '_self' }: MapViewProps = {}) {
+  const { t } = useLocale();
   const [nodePositions, setNodePositions] = useState<NodePosition[]>([]);
   const [bounds, setBounds] = useState<[[number, number], [number, number]] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -766,8 +768,8 @@ export default function MapView({ target = '_self' }: MapViewProps = {}) {
         <RefreshButton
           onClick={() => bounds && fetchNodes(bounds, showAllNeighbors)}
           loading={loading || !bounds}
-          title="Refresh map nodes"
-          ariaLabel="Refresh map nodes"
+          title={t("mapSettings.refreshMapNodes")}
+          ariaLabel={t("mapSettings.refreshMapNodes")}
         />
         <MapLayerSettingsComponent
           onSettingsChange={setMapLayerSettings}
@@ -872,36 +874,36 @@ export default function MapView({ target = '_self' }: MapViewProps = {}) {
             fontFamily: 'monospace'
           }}>
             <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>
-              Path Traffic
+              {t("mapSettings.pathTraffic")}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div style={{ width: '20px', height: '2px', backgroundColor: '#dc2626' }}></div>
-                <span>High: {legendThresholds.t4}+ packets</span>
+                <span>{t("mapSettings.high")}: {legendThresholds.t4}+ {t("mapSettings.packets")}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div style={{ width: '20px', height: '2px', backgroundColor: '#ea580c' }}></div>
-                <span>Med-High: {legendThresholds.t3}-{legendThresholds.t4 - 1}</span>
+                <span>{t("mapSettings.medHigh")}: {legendThresholds.t3}-{legendThresholds.t4 - 1}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div style={{ width: '20px', height: '2px', backgroundColor: '#f59e0b' }}></div>
-                <span>Medium: {legendThresholds.t2}-{legendThresholds.t3 - 1}</span>
+                <span>{t("mapSettings.medium")}: {legendThresholds.t2}-{legendThresholds.t3 - 1}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div style={{ width: '20px', height: '2px', backgroundColor: '#eab308' }}></div>
-                <span>Low-Med: {legendThresholds.t1}-{legendThresholds.t2 - 1}</span>
+                <span>{t("mapSettings.lowMed")}: {legendThresholds.t1}-{legendThresholds.t2 - 1}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div style={{ width: '20px', height: '2px', backgroundColor: '#84cc16' }}></div>
-                <span>Low: {legendThresholds.min + 1}-{legendThresholds.t1 - 1}</span>
+                <span>{t("mapSettings.low")}: {legendThresholds.min + 1}-{legendThresholds.t1 - 1}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div style={{ width: '20px', height: '2px', backgroundColor: '#6b7280' }}></div>
-                <span>Minimal: {legendThresholds.min}</span>
+                <span>{t("mapSettings.minimal")}: {legendThresholds.min}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px', paddingTop: '4px', borderTop: '1px solid #e5e7eb' }}>
                 <div style={{ width: '20px', height: '2px', backgroundColor: '#8b5cf6' }}></div>
-                <span>MQTT connections</span>
+                <span>{t("mapSettings.mqttConnections")}</span>
               </div>
             </div>
           </div>

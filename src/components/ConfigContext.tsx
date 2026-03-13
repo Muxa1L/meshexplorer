@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect, useRef, useLayou
 import { getChannelIdFromKey, deriveKeyFromChannelName } from "@/lib/meshcore";
 import { getRegionFriendlyNames } from "@/lib/regions";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { useLocale } from "./LocaleProvider";
 import Modal from "./Modal";
 
 // Config shape
@@ -33,6 +34,13 @@ export const LAST_SEEN_OPTIONS = [
   { value: 604800, label: "1w" },
   { value: null, label: "Forever (all time)" },
 ];
+
+export function getLastSeenOptions(t: (key: string) => string) {
+  return LAST_SEEN_OPTIONS.map((option) => ({
+    ...option,
+    label: option.value === null ? t("config.forever") : option.label,
+  }));
+}
 
 const PUBLIC_MESHCORE_KEY = {
   channelName: "Public",
@@ -80,6 +88,8 @@ export function useConfig() {
 
 function ConfigPopover({ config, setConfig, onClose, anchorRef, onOpenKeyModal }: { config: Config, setConfig: (c: Config) => void, onClose: () => void, anchorRef: React.RefObject<HTMLElement | null>, onOpenKeyModal: () => void }) {
   const popoverRef = useRef<HTMLDivElement>(null);
+  const { t } = useLocale();
+  const lastSeenOptions = getLastSeenOptions(t);
 
   // Click outside to close
   useEffect(() => {
@@ -107,13 +117,13 @@ function ConfigPopover({ config, setConfig, onClose, anchorRef, onOpenKeyModal }
       <button
         className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
         onClick={onClose}
-        aria-label="Close config"
+        aria-label={t("config.closeConfig")}
       >
         <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
       </button>
-      <h2 className="text-lg font-semibold mb-4">Settings</h2>
+      <h2 className="text-lg font-semibold mb-4">{t("common.settings")}</h2>
       <div className="mb-2">
-        <div className="font-medium mb-2">Last Seen</div>
+        <div className="font-medium mb-2">{t("config.lastSeen")}</div>
         <select
           className="w-full p-2 border rounded"
           value={config.lastSeen === null ? '' : config.lastSeen}
@@ -121,7 +131,7 @@ function ConfigPopover({ config, setConfig, onClose, anchorRef, onOpenKeyModal }
             setConfig({ ...config, lastSeen: e.target.value === '' ? null : Number(e.target.value) });
           }}
         >
-          {LAST_SEEN_OPTIONS.map(opt => (
+          {lastSeenOptions.map(opt => (
             <option key={String(opt.value)} value={opt.value === null ? '' : opt.value}>
               {opt.label}
             </option>
@@ -129,19 +139,19 @@ function ConfigPopover({ config, setConfig, onClose, anchorRef, onOpenKeyModal }
         </select>
       </div>
       <div className="mb-2">
-        <div className="font-medium mb-2">Region</div>
+        <div className="font-medium mb-2">{t("config.region")}</div>
         <select
           className="w-full p-2 border rounded"
           value={config.selectedRegion || ''}
           onChange={e => setConfig({ ...config, selectedRegion: e.target.value || undefined })}
         >
-          <option value="">Select a region...</option>
+          <option value="">{t("config.selectRegion")}</option>
           {getRegionFriendlyNames().map(({ name, friendlyName }) => (
             <option key={name} value={name}>{friendlyName}</option>
           ))}
         </select>
         <p className="text-xs text-gray-500 mt-1">
-          Select a region to filter chat messages and stats
+          {t("config.regionHelp")}
         </p>
       </div>
       <div className="mb-2">
@@ -149,7 +159,7 @@ function ConfigPopover({ config, setConfig, onClose, anchorRef, onOpenKeyModal }
           className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 w-full"
           onClick={onOpenKeyModal}
         >
-          Manage Channel Keys
+          {t("config.manageChannelKeys")}
         </button>
       </div>
     </div>
@@ -186,17 +196,18 @@ function validateMeshcoreKey(key: string): string | null {
 }
 
 function MeshcoreKeyModal({ config, setConfig, onClose }: { config: Config, setConfig: (c: Config) => void, onClose: () => void }) {
+  const { t } = useLocale();
   return (
-    <Modal isOpen={true} onClose={onClose} title="Meshcore Channel Keys" maxWidth="90vw">
+    <Modal isOpen={true} onClose={onClose} title={t("config.keyModalTitle")} maxWidth="90vw">
       <p className="mb-4 text-sm text-gray-600 dark:text-gray-300">
-        These keys will be used to decrypt messages. <b>Your keys are never shared with the server</b>, so your messages remain secure.
+        {t("config.keyModalDescription")}
       </p>
         <div className="flex flex-col gap-1 mb-2 p-2 border rounded bg-gray-100 dark:bg-neutral-700 opacity-80">
           <div className="flex items-center gap-2">
             <input
               className="flex-1 p-1 border rounded bg-gray-200 dark:bg-neutral-800 cursor-not-allowed"
               type="text"
-              value={PUBLIC_MESHCORE_KEY.channelName}
+              value={t("config.publicChannel")}
               disabled
               readOnly
             />
@@ -223,9 +234,9 @@ function MeshcoreKeyModal({ config, setConfig, onClose }: { config: Config, setC
             <button
               className="text-gray-400 px-2 py-1 cursor-not-allowed"
               disabled
-              aria-label="Remove key"
+              aria-label={t("config.removeKey")}
             >
-              Remove
+              {t("config.removeKey")}
             </button>
           </div>
         </div>
@@ -237,7 +248,7 @@ function MeshcoreKeyModal({ config, setConfig, onClose }: { config: Config, setC
                 <input
                   className="flex-1 p-1 border rounded"
                   type="text"
-                  placeholder="Channel Name"
+                  placeholder={t("config.channelNamePlaceholder")}
                   value={key.channelName}
                   onChange={e => {
                     const updated = [...(config.meshcoreKeys || [])];
@@ -273,7 +284,7 @@ function MeshcoreKeyModal({ config, setConfig, onClose }: { config: Config, setC
                 <input
                   className={`flex-1 p-1 border rounded font-mono ${keyError ? 'border-red-500' : ''}`}
                   type="text"
-                  placeholder="Base64 or Hex Private Key (auto-filled for # channels)"
+                  placeholder={t("config.privateKeyPlaceholder")}
                   value={key.privateKey}
                   onChange={e => {
                     const updated = [...(config.meshcoreKeys || [])];
@@ -288,13 +299,13 @@ function MeshcoreKeyModal({ config, setConfig, onClose }: { config: Config, setC
                     updated.splice(idx, 1);
                     setConfig({ ...config, meshcoreKeys: updated });
                   }}
-                  aria-label="Remove key"
+                  aria-label={t("config.removeKey")}
                 >
-                  Remove
+                  {t("config.removeKey")}
                 </button>
               </div>
               {keyError && (
-                <div className="text-xs text-red-500 mt-1">{keyError}</div>
+                <div className="text-xs text-red-500 mt-1">{t("config.keyValidation")}</div>
               )}
             </div>
           );
@@ -308,7 +319,7 @@ function MeshcoreKeyModal({ config, setConfig, onClose }: { config: Config, setC
             });
           }}
         >
-          Add Channel Key
+          {t("config.addChannelKey")}
         </button>
     </Modal>
   );

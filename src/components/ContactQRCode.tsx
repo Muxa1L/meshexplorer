@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
+import { useLocale } from "./LocaleProvider";
 
 interface ContactQRCodeProps {
   name: string;
@@ -13,6 +14,7 @@ interface ContactQRCodeProps {
 export default function ContactQRCode({ name, publicKey, type, size = 200 }: ContactQRCodeProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [contactUrl, setContactUrl] = useState<string>("");
+  const { t } = useLocale();
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -44,7 +46,7 @@ export default function ContactQRCode({ name, publicKey, type, size = 200 }: Con
         href={contactUrl}
         rel="noopener noreferrer"
         className="inline-block hover:opacity-80 transition-opacity"
-        title="Click to open meshcore contact link"
+        title={t("contactQr.openLink")}
       >
         <canvas
           ref={canvasRef}

@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { usePacketCountByType } from "@/hooks/useStats";
+import { useLocale } from "./LocaleProvider";
 import {
   LineChart,
   Line,
@@ -35,6 +36,7 @@ const COLORS: { [key: string]: string } = {
 };
 
 export default function PacketCountChart({ region }: PacketCountChartProps) {
+  const { t } = useLocale();
   const [days, setDays] = useState(7);
   const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set());
   const query = usePacketCountByType(region, days);
@@ -157,7 +159,7 @@ export default function PacketCountChart({ region }: PacketCountChartProps) {
     <div className="w-full">
       <div className="mb-4 flex gap-2 flex-wrap">
         <label className="text-sm text-gray-600 dark:text-gray-400 flex items-center mr-4">
-          Time Period:
+          {t("packetCount.timePeriod")}
         </label>
         {[1, 7, 14, 30].map((d) => (
           <button
@@ -169,7 +171,7 @@ export default function PacketCountChart({ region }: PacketCountChartProps) {
                 : "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700"
             }`}
           >
-            {d === 1 ? "1 Day" : `${d} Days`}
+            {d === 1 ? t("packetCount.oneDay") : t("packetCount.manyDays", { days: d })}
           </button>
         ))}
       </div>
@@ -178,19 +180,19 @@ export default function PacketCountChart({ region }: PacketCountChartProps) {
         <div className="h-80 flex items-center justify-center">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
-            <p className="text-gray-600 dark:text-gray-400">Loading chart data...</p>
+            <p className="text-gray-600 dark:text-gray-400">{t("packetCount.loadingChart")}</p>
           </div>
         </div>
       ) : query.error ? (
         <div className="h-80 flex items-center justify-center">
           <div className="text-red-600 dark:text-red-400">
-            <p className="font-semibold">Error Loading Data</p>
+            <p className="font-semibold">{t("packetCount.errorTitle")}</p>
             <p className="text-sm">{query.error.message}</p>
           </div>
         </div>
       ) : chartData.length === 0 ? (
         <div className="h-80 flex items-center justify-center">
-          <p className="text-gray-600 dark:text-gray-400">No data available</p>
+          <p className="text-gray-600 dark:text-gray-400">{t("packetCount.noData")}</p>
         </div>
       ) : (
         <div className="w-full h-96 bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
@@ -236,9 +238,9 @@ export default function PacketCountChart({ region }: PacketCountChartProps) {
 
       <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
         <p>
-          Showing packet count by type over the last {days} day{days > 1 ? "s" : ""}.
-          Displaying {visiblePayloadTypes.length} of {payloadTypes.length} packet type{payloadTypes.length > 1 ? "s" : ""}.
-          Click legend items to show/hide series.
+          {days === 1
+            ? t("packetCount.summaryOneDay", { days, visible: visiblePayloadTypes.length, total: payloadTypes.length })
+            : t("packetCount.summary", { days, visible: visiblePayloadTypes.length, total: payloadTypes.length })}
         </p>
       </div>
     </div>

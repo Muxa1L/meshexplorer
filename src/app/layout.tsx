@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ConfigProvider } from "@/components/ConfigContext";
+import { LocaleProvider } from "@/components/LocaleProvider";
 import { QueryProvider } from "@/components/QueryProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
 
@@ -37,19 +38,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         style={{ '--header-height': '64px' } as React.CSSProperties}
       >
         <div className="flex flex-col min-h-screen w-full">
-          <ThemeProvider>
-            <QueryProvider>
-              <ConfigProvider>
-                {children}
-              </ConfigProvider>
-            </QueryProvider>
-          </ThemeProvider>
+          <LocaleProvider>
+            <ThemeProvider>
+              <QueryProvider>
+                <ConfigProvider>
+                  {children}
+                </ConfigProvider>
+              </QueryProvider>
+            </ThemeProvider>
+          </LocaleProvider>
         </div>
       </body>
     </html>

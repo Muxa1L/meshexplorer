@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useRef } from "react";
+import { useLocale } from "./LocaleProvider";
 
 interface ModalProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface ModalProps {
 
 export default function Modal({ isOpen, onClose, title, children, maxWidth = "500px" }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
+  const { t } = useLocale();
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -51,7 +53,7 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = "50
         <button
           className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
           onClick={onClose}
-          aria-label="Close modal"
+          aria-label={t("common.close")}
         >
           <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

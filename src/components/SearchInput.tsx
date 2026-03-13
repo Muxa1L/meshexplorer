@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { useLocale } from './LocaleProvider';
 
 interface SearchInputProps {
   value: string;
@@ -18,6 +19,7 @@ export default function SearchInput({
   className = "",
   autoFocus = false
 }: SearchInputProps) {
+  const { t } = useLocale();
   const [localValue, setLocalValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
   const isUpdatingFromProps = useRef(false);
@@ -73,7 +75,7 @@ export default function SearchInput({
           <button
             onClick={handleClear}
             className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-            aria-label="Clear search"
+            aria-label={t("searchPage.clearSearch")}
           >
             <XMarkIcon className="h-5 w-5" />
           </button>

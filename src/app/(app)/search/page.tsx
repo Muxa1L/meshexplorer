@@ -6,13 +6,14 @@ import { useMeshcoreSearch } from '@/hooks/useMeshcoreSearch';
 import SearchInput from '@/components/SearchInput';
 import SearchResults from '@/components/SearchResults';
 import RegionSelector from '@/components/RegionSelector';
-import { LAST_SEEN_OPTIONS } from '@/components/ConfigContext';
+import { getLastSeenOptions } from '@/components/ConfigContext';
 import { useState, Suspense, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { ChevronDownIcon } from '@heroicons/react/24/outline';
+import { useLocale } from '@/components/LocaleProvider';
 
 function SearchPageContent() {
   const { config } = useConfig();
+  const { t } = useLocale();
   const { query, setQuery, setLimit, setExact, setIsRepeater } = useSearchQuery();
   const [showFilters, setShowFilters] = useState(false);
 
@@ -38,6 +39,7 @@ function SearchPageContent() {
   });
 
   const { setConfig } = useConfig();
+  const lastSeenOptions = getLastSeenOptions(t);
 
   const handleRegionChange = (region: string) => {
     setConfig({ ...config, selectedRegion: region || undefined });
@@ -57,10 +59,10 @@ function SearchPageContent() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-            Search MeshCore Nodes
+            {t("searchPage.title")}
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Find nodes by name or public key across the mesh network
+            {t("searchPage.subtitle")}
           </p>
         </div>
 
@@ -69,7 +71,7 @@ function SearchPageContent() {
           <SearchInput
             value={query.q}
             onChange={setQuery}
-            placeholder="Search by node name or public key..."
+            placeholder={t("searchPage.placeholder")}
             autoFocus
           />
         </div>
@@ -80,7 +82,7 @@ function SearchPageContent() {
             onClick={() => setShowFilters(!showFilters)}
             className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
           >
-            <span>Filters</span>
+            <span>{t("common.filters")}</span>
             <ChevronDownIcon className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
           </button>
 
@@ -90,14 +92,14 @@ function SearchPageContent() {
                 {/* Region Filter */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Region
+                    {t("searchPage.regionLabel")}
                   </label>
                   <select
                     value={config.selectedRegion || ''}
                     onChange={(e) => handleRegionChange(e.target.value || '')}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="">All Regions</option>
+                    <option value="">{t("searchPage.allRegions")}</option>
                     <option value="krasnodar_pub">Krasnodar</option>
                     <option value="stavropol">Stavropol</option>
                   </select>
@@ -106,14 +108,14 @@ function SearchPageContent() {
                 {/* Last Seen Filter */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Last Seen
+                    {t("searchPage.lastSeenLabel")}
                   </label>
                   <select
                     value={config.lastSeen || ''}
                     onChange={(e) => handleLastSeenChange(e.target.value ? parseInt(e.target.value, 10) : null)}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    {LAST_SEEN_OPTIONS.map((option) => (
+                    {lastSeenOptions.map((option) => (
                       <option key={option.value || 'null'} value={option.value || ''}>
                         {option.label}
                       </option>
@@ -124,25 +126,25 @@ function SearchPageContent() {
                 {/* Limit Filter */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Results Limit
+                    {t("searchPage.resultsLimit")}
                   </label>
                   <select
                     value={searchParams.limit}
                     onChange={(e) => handleLimitChange(parseInt(e.target.value, 10))}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value={10}>10 results</option>
-                    <option value={25}>25 results</option>
-                    <option value={50}>50 results</option>
-                    <option value={100}>100 results</option>
-                    <option value={200}>200 results</option>
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                    <option value={200}>200</option>
                   </select>
                 </div>
 
                 {/* Exact Match Filter */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Match Type
+                    {t("searchPage.matchType")}
                   </label>
                   <div className="flex items-center">
                     <input
@@ -153,7 +155,7 @@ function SearchPageContent() {
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
                     <label htmlFor="exact-match" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                      Exact match only
+                      {t("searchPage.exactOnly")}
                     </label>
                   </div>
                 </div>
@@ -161,7 +163,7 @@ function SearchPageContent() {
                 {/* Repeater Filter */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Node Type
+                    {t("searchPage.nodeType")}
                   </label>
                   <div className="flex items-center">
                     <input
@@ -172,7 +174,7 @@ function SearchPageContent() {
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
                     <label htmlFor="is-repeater" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                      Repeaters only
+                      {t("searchPage.repeatersOnly")}
                     </label>
                   </div>
                 </div>
@@ -196,12 +198,14 @@ function SearchPageContent() {
 }
 
 export default function SearchPage() {
+  const { t } = useLocale();
+
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-gray-50 dark:bg-neutral-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading search...</p>
+          <p className="text-gray-600 dark:text-gray-400">{t("searchPage.loadingSearch")}</p>
         </div>
       </div>
     }>

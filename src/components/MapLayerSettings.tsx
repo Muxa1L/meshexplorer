@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useMapLayerSettings, TILE_LAYERS, NODE_TYPE_OPTIONS, type MapLayerSettings } from '@/hooks/useMapLayerSettings';
 import { Square3Stack3DIcon } from '@heroicons/react/24/outline';
+import { useLocale } from './LocaleProvider';
 
 interface MapLayerSettingsProps {
   onSettingsChange?: (settings: MapLayerSettings) => void;
@@ -9,6 +10,7 @@ interface MapLayerSettingsProps {
 
 export default function MapLayerSettingsComponent({ onSettingsChange }: MapLayerSettingsProps) {
   const [settings, setSettings] = useMapLayerSettings();
+  const { t } = useLocale();
   const [isOpen, setIsOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -47,8 +49,8 @@ export default function MapLayerSettingsComponent({ onSettingsChange }: MapLayer
         ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
         className="p-2 bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 rounded-lg transition-colors"
-        title="Map layer settings"
-        aria-label="Map layer settings"
+        title={t("mapSettings.button")}
+        aria-label={t("mapSettings.button")}
       >
         {/* Layers icon */}
         <Square3Stack3DIcon className="w-5 h-5" />
@@ -60,7 +62,7 @@ export default function MapLayerSettingsComponent({ onSettingsChange }: MapLayer
           className="absolute top-full right-0 mt-2 bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-700 rounded-lg shadow-lg p-4 min-w-[250px] z-[1100]"
           style={{ boxSizing: 'border-box' }}
         >
-          <h3 className="text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">Map Settings</h3>
+          <h3 className="text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">{t("mapSettings.title")}</h3>
           
           {/* Show nodes */}
           <label className="flex items-center gap-2 mb-2 cursor-pointer">
@@ -70,7 +72,7 @@ export default function MapLayerSettingsComponent({ onSettingsChange }: MapLayer
               onChange={(e) => updateSetting('showNodes', e.target.checked)}
               className="rounded"
             />
-            <span className="text-sm text-gray-700 dark:text-gray-300">Show nodes</span>
+            <span className="text-sm text-gray-700 dark:text-gray-300">{t("mapSettings.showNodes")}</span>
           </label>
 
           {/* Node types - indented sub-options */}
@@ -114,7 +116,7 @@ export default function MapLayerSettingsComponent({ onSettingsChange }: MapLayer
                 ? 'text-gray-700 dark:text-gray-300' 
                 : 'text-gray-400 dark:text-gray-500'
             }`}>
-              Show node names
+              {t("mapSettings.showNodeNames")}
             </span>
           </label>
 
@@ -132,7 +134,7 @@ export default function MapLayerSettingsComponent({ onSettingsChange }: MapLayer
                 ? 'text-gray-700 dark:text-gray-300' 
                 : 'text-gray-400 dark:text-gray-500'
             }`}>
-              Enable marker clustering
+              {t("mapSettings.enableClustering")}
             </span>
           </label>
 
@@ -144,7 +146,7 @@ export default function MapLayerSettingsComponent({ onSettingsChange }: MapLayer
               onChange={(e) => updateSetting('showAllNeighbors', e.target.checked)}
               className="rounded"
             />
-            <span className="text-sm text-gray-700 dark:text-gray-300">Show all neighbors</span>
+            <span className="text-sm text-gray-700 dark:text-gray-300">{t("mapSettings.showAllNeighbors")}</span>
           </label>
 
           {/* Use colors - indented sub-option */}
@@ -161,7 +163,7 @@ export default function MapLayerSettingsComponent({ onSettingsChange }: MapLayer
                 ? 'text-gray-700 dark:text-gray-300' 
                 : 'text-gray-400 dark:text-gray-500'
             }`}>
-              Use colors
+              {t("mapSettings.useColors")}
             </span>
           </label>
 
@@ -172,7 +174,7 @@ export default function MapLayerSettingsComponent({ onSettingsChange }: MapLayer
                 ? 'text-gray-700 dark:text-gray-300' 
                 : 'text-gray-400 dark:text-gray-500'
             } mb-1`}>
-              Min packet count threshold
+              {t("mapSettings.minPacketCount")}
             </label>
             <input
               type="number"
@@ -192,14 +194,14 @@ export default function MapLayerSettingsComponent({ onSettingsChange }: MapLayer
                 ? 'text-gray-500 dark:text-gray-400' 
                 : 'text-gray-400 dark:text-gray-500'
             }`}>
-              Only show path neighbors with at least this many packets
+              {t("mapSettings.minPacketCountHelp")}
             </p>
           </div>
 
           {/* Tile layer */}
           <div className="mb-3">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Tile layer
+              {t("mapSettings.tileLayer")}
             </label>
             <select
               value={settings.tileLayer}
@@ -222,7 +224,7 @@ export default function MapLayerSettingsComponent({ onSettingsChange }: MapLayer
               onChange={(e) => updateSetting('showWardriveOverlay', e.target.checked)}
               className="rounded"
             />
-            <span className="text-sm text-gray-700 dark:text-gray-300">Show wardrive discover coverage</span>
+            <span className="text-sm text-gray-700 dark:text-gray-300">{t("mapSettings.showWardriveOverlay")}</span>
           </label>
 
           {/* Resolution sub-option */}
@@ -232,7 +234,7 @@ export default function MapLayerSettingsComponent({ onSettingsChange }: MapLayer
                 ? 'text-gray-700 dark:text-gray-300'
                 : 'text-gray-400 dark:text-gray-500'
             }`}>
-              Resolution (geohash precision)
+              {t("mapSettings.resolution")}
             </label>
             <select
               value={settings.wardriveResolution}
@@ -246,7 +248,7 @@ export default function MapLayerSettingsComponent({ onSettingsChange }: MapLayer
             >
               {[5, 6, 7].map((p) => (
                 <option key={p} value={p}>
-                  {p} – {p <= 5 ? 'very coarse' : p <= 6 ? 'coarse' : p <= 7 ? 'medium' : p <= 8 ? 'fine' : 'very fine'}
+                  {p} – {p <= 5 ? t("mapSettings.veryCoarse") : p <= 6 ? t("mapSettings.coarse") : p <= 7 ? t("mapSettings.mediumResolution") : p <= 8 ? t("mapSettings.fine") : t("mapSettings.veryFine")}
                 </option>
               ))}
             </select>

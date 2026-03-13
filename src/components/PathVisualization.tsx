@@ -7,6 +7,7 @@ import Tree from 'react-d3-tree';
 import { ArrowsPointingOutIcon, ArrowsPointingInIcon } from "@heroicons/react/24/outline";
 import { ExternalLink } from "lucide-react";
 import NodeLinkWithHover from "./NodeLinkWithHover";
+import { useLocale } from "./LocaleProvider";
 import { useMeshcoreSearches } from "@/hooks/useMeshcoreSearch";
 import type { MeshcoreSearchResult } from "@/hooks/useMeshcoreSearch";
 import { useConfigWithRegion } from "@/hooks/useConfigWithRegion";
@@ -31,18 +32,20 @@ interface PathVisualizationProps {
 
 export default function PathVisualization({ 
   paths, 
-  title = "Paths", 
+  title,
   className = "",
   showDropdown = true,
   initiatingNodeKey,
   packetHash
 }: PathVisualizationProps) {
+  const { t } = useLocale();
   const [expanded, setExpanded] = useState(false);
   const [showGraph, setShowGraph] = useState(false);
   const [graphFullscreen, setGraphFullscreen] = useState(false);
   
   const { config } = useConfigWithRegion();
   const pathsCount = paths.length;
+  const resolvedTitle = title ?? t("path.paths");
 
   // Group paths by structure
   const pathGroups = useMemo(() => 
@@ -229,7 +232,7 @@ export default function PathVisualization({
           <div className="bg-white dark:bg-neutral-900 rounded-lg p-4 max-w-7xl max-h-4xl w-full h-full flex flex-col">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                Path Visualization
+                {t("path.visualization")}
               </h3>
               <button
                 onClick={handleFullscreenToggle}
@@ -253,7 +256,7 @@ export default function PathVisualization({
       <div className="mt-2">
         <div className="flex justify-between items-center mb-2">
           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Path Graph
+            {t("path.pathGraph")}
           </span>
           <button
             onClick={handleFullscreenToggle}
@@ -274,14 +277,14 @@ export default function PathVisualization({
       <div className={className}>
         <div className="flex items-center gap-2 mb-2">
           <span className="text-sm text-gray-600 dark:text-gray-300">
-            Heard {pathsCount} time{pathsCount !== 1 ? 's' : ''}
+            {resolvedTitle}
           </span>
           {pathsCount > 0 && (
             <button
               onClick={handleGraphToggle}
               className="flex items-center gap-1 hover:text-gray-800 dark:hover:text-gray-100 transition-colors text-sm"
             >
-              <span>{showGraph ? 'Hide Graph' : 'Show Graph'}</span>
+              <span>{showGraph ? t("path.hideGraph") : t("path.showGraph")}</span>
             </button>
           )}
           {packetHash && (
@@ -291,7 +294,7 @@ export default function PathVisualization({
               rel="noopener noreferrer"
               className="flex items-center gap-1 hover:text-gray-800 dark:hover:text-gray-100 transition-colors text-sm"
             >
-              <span>Analyze</span>
+              <span>{t("path.analyze")}</span>
               <ExternalLink className="w-3 h-3" />
             </a>
           )}
@@ -309,7 +312,7 @@ export default function PathVisualization({
           onClick={handleToggle}
           className="flex items-center gap-1 hover:text-gray-800 dark:hover:text-gray-100 transition-colors"
         >
-          <span>Heard {pathsCount} time{pathsCount !== 1 ? 's' : ''}</span>
+          <span>{t("path.heardTimes", { count: pathsCount })}</span>
           <svg
             className={`w-3 h-3 transition-transform ${expanded ? 'rotate-180' : ''}`}
             fill="none"
@@ -325,7 +328,7 @@ export default function PathVisualization({
             onClick={handleGraphToggle}
             className="flex items-center gap-1 hover:text-gray-800 dark:hover:text-gray-100 transition-colors"
           >
-            <span>{showGraph ? 'Hide Graph' : 'Show Graph'}</span>
+            <span>{showGraph ? t("path.hideGraph") : t("path.showGraph")}</span>
           </button>
         )}
         
@@ -336,7 +339,7 @@ export default function PathVisualization({
             rel="noopener noreferrer"
             className="flex items-center gap-1 hover:text-gray-800 dark:hover:text-gray-100 transition-colors"
           >
-            <span>Analyze</span>
+            <span>{t("path.analyze")}</span>
             <ExternalLink className="w-3 h-3" />
           </a>
         )}

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import moment from 'moment';
 import { formatPublicKey } from '@/lib/meshcore';
 import { MeshcoreSearchResult } from '@/hooks/useMeshcoreSearch';
+import { useLocale } from './LocaleProvider';
 
 export interface NodeCardData {
   public_key: string;
@@ -27,6 +28,7 @@ interface NodeCardProps {
 }
 
 export default function NodeCard({ node, className = "", showTopicInfo = true }: NodeCardProps) {
+  const { t } = useLocale();
   const hasLocation = node.has_location === 1;
   const isRepeater = node.is_repeater === 1;
   const isChatNode = node.is_chat_node === 1;
@@ -41,25 +43,25 @@ export default function NodeCard({ node, className = "", showTopicInfo = true }:
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
             <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100 truncate">
-              {node.node_name || 'Unnamed Node'}
+              {node.node_name || t("nodeCard.unnamedNode")}
             </h4>
             <div className="flex items-center gap-1">
               {isRepeater && (
                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
                   <WifiIcon className="h-3 w-3 mr-1" />
-                  Repeater
+                  {t("nodeCard.repeater")}
                 </span>
               )}
               {isChatNode && (
                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
                   <ChatBubbleLeftRightIcon className="h-3 w-3 mr-1" />
-                  Chat
+                  {t("nodeCard.chat")}
                 </span>
               )}
               {isRoomServer && (
                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200">
                   <ServerIcon className="h-3 w-3 mr-1" />
-                  Room Server
+                  {t("nodeCard.roomServer")}
                 </span>
               )}
             </div>
@@ -76,7 +78,7 @@ export default function NodeCard({ node, className = "", showTopicInfo = true }:
             )}
             
             <div className="flex items-center gap-4">
-              <span>Last seen: {moment.utc(node.last_seen).local().fromNow()}</span>
+              <span>{t("nodeCard.lastSeen")}: {moment.utc(node.last_seen).local().fromNow()}</span>
               <span className="text-xs font-mono text-gray-500 dark:text-gray-500">
                 {formatPublicKey(node.public_key)}
               </span>
@@ -84,7 +86,7 @@ export default function NodeCard({ node, className = "", showTopicInfo = true }:
 
             {showTopicInfo && node.topic && node.broker && (
               <div className="text-xs text-gray-500 dark:text-gray-500">
-                Topic: {node.topic} • Broker: {node.broker.split('://')[1]}
+                {t("nodeCard.topic")}: {node.topic} • {t("nodeCard.broker")}: {node.broker.split('://')[1]}
               </div>
             )}
           </div>
