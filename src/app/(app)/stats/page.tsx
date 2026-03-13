@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useConfig } from "@/components/ConfigContext";
-import { getRegionConfig } from "@/lib/regions";
+import { getRegionDisplayName } from "@/lib/regions";
 import { 
   useTotalNodes, 
   useNodesOverTime, 
@@ -27,7 +27,7 @@ function AnchorLink({ id }: { id: string }) {
 
 export default function StatsPage() {
   const { config } = useConfig();
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   const region = config?.selectedRegion;
   
   // Use TanStack Query hooks for data fetching
@@ -58,7 +58,7 @@ export default function StatsPage() {
 
   // Get the friendly name for the selected region
   const regionFriendlyName = config?.selectedRegion 
-    ? getRegionConfig(config.selectedRegion)?.friendlyName || config.selectedRegion
+    ? getRegionDisplayName(config.selectedRegion, locale)
     : null;
 
   // Handle scrolling to anchor after data loads

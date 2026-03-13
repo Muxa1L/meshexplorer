@@ -1,4 +1,5 @@
 import { clickhouse } from "./clickhouse/clickhouse";
+import type { Locale } from "@/i18n/messages";
 
 export interface RegionConfig {
   name: string;
@@ -28,6 +29,17 @@ export const REGIONS: RegionConfig[] = [
   },
 ];
 
+const REGION_TRANSLATIONS: Record<string, Record<Locale, string>> = {
+  krasnodar_pub: {
+    en: "Krasnodar",
+    ru: "Краснодар",
+  },
+  stavropol: {
+    en: "Stavropol",
+    ru: "Ставрополь",
+  },
+};
+
 export function getRegionConfig(regionName: string): RegionConfig | undefined {
   return REGIONS.find(region => region.name === regionName);
 }
@@ -38,6 +50,19 @@ export function getRegionNames(): string[] {
 
 export function getRegionFriendlyNames(): { name: string; friendlyName: string }[] {
   return REGIONS.map(region => ({ name: region.name, friendlyName: region.friendlyName }));
+}
+
+export function getRegionDisplayName(regionName: string, locale: Locale = "en"): string {
+  const translated = REGION_TRANSLATIONS[regionName]?.[locale];
+  if (translated) return translated;
+  return getRegionConfig(regionName)?.friendlyName || regionName;
+}
+
+export function getLocalizedRegionFriendlyNames(locale: Locale = "en"): { name: string; friendlyName: string }[] {
+  return REGIONS.map(region => ({
+    name: region.name,
+    friendlyName: getRegionDisplayName(region.name, locale),
+  }));
 }
 
 /**

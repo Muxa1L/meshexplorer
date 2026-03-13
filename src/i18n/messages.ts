@@ -18,8 +18,13 @@ export const messages = {
       english: "English",
       russian: "Русский",
     },
+    regions: {
+      krasnodar_pub: "Krasnodar",
+      stavropol: "Stavropol",
+    },
     header: {
       messages: "Messages",
+      map: "Map",
       packets: "Packets",
       stats: "Stats",
       packetStats: "Packet stats",
@@ -386,8 +391,13 @@ export const messages = {
       english: "English",
       russian: "Русский",
     },
+    regions: {
+      krasnodar_pub: "Краснодар",
+      stavropol: "Ставрополь",
+    },
     header: {
       messages: "Сообщения",
+      map: "Карта",
       packets: "Пакеты",
       stats: "Статистика",
       packetStats: "Статистика пакетов",

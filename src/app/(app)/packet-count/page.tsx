@@ -1,19 +1,19 @@
 "use client";
 
 import { useConfig } from "@/components/ConfigContext";
-import { getRegionConfig } from "@/lib/regions";
+import { getRegionDisplayName } from "@/lib/regions";
 import PacketCountChart from "@/components/PacketCountChart";
 import Link from "next/link";
 import { useLocale } from "@/components/LocaleProvider";
 
 export default function PacketCountPage() {
   const { config } = useConfig();
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   const region = config?.selectedRegion;
 
   // Get the friendly name for the selected region
   const regionFriendlyName = config?.selectedRegion
-    ? getRegionConfig(config.selectedRegion)?.friendlyName || config.selectedRegion
+    ? getRegionDisplayName(config.selectedRegion, locale)
     : null;
 
   return (

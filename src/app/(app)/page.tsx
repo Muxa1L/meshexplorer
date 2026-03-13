@@ -1,5 +1,5 @@
-import MapWithChatClient from "@/components/MapWithChatClient";
+import MessagesPage from "./messages/page";
 
 export default function Home() {
-  return <MapWithChatClient />;
+  return <MessagesPage />;
 }

@@ -1,7 +1,7 @@
 "use client";
 import { useConfig } from "./ConfigContext";
 import { useLocale } from "./LocaleProvider";
-import { getRegionFriendlyNames } from "@/lib/regions";
+import { getLocalizedRegionFriendlyNames } from "@/lib/regions";
 
 interface RegionSelectorProps {
   onRegionSelected?: () => void;
@@ -10,8 +10,8 @@ interface RegionSelectorProps {
 
 export default function RegionSelector({ onRegionSelected, className = "" }: RegionSelectorProps) {
   const { config, setConfig } = useConfig();
-  const { t } = useLocale();
-  const regions = getRegionFriendlyNames();
+  const { locale, t } = useLocale();
+  const regions = getLocalizedRegionFriendlyNames(locale);
 
   const handleRegionSelect = (regionName: string) => {
     setConfig({ ...config, selectedRegion: regionName });

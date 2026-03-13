@@ -7,13 +7,14 @@ import SearchInput from '@/components/SearchInput';
 import SearchResults from '@/components/SearchResults';
 import RegionSelector from '@/components/RegionSelector';
 import { getLastSeenOptions } from '@/components/ConfigContext';
+import { getLocalizedRegionFriendlyNames } from '@/lib/regions';
 import { useState, Suspense, useEffect } from 'react';
 import { ChevronDownIcon } from '@heroicons/react/24/outline';
 import { useLocale } from '@/components/LocaleProvider';
 
 function SearchPageContent() {
   const { config } = useConfig();
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   const { query, setQuery, setLimit, setExact, setIsRepeater } = useSearchQuery();
   const [showFilters, setShowFilters] = useState(false);
 
@@ -40,6 +41,7 @@ function SearchPageContent() {
 
   const { setConfig } = useConfig();
   const lastSeenOptions = getLastSeenOptions(t);
+  const localizedRegions = getLocalizedRegionFriendlyNames(locale);
 
   const handleRegionChange = (region: string) => {
     setConfig({ ...config, selectedRegion: region || undefined });
@@ -100,8 +102,9 @@ function SearchPageContent() {
                     className="w-full px-3 py-2 border border-gray-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">{t("searchPage.allRegions")}</option>
-                    <option value="krasnodar_pub">Krasnodar</option>
-                    <option value="stavropol">Stavropol</option>
+                    {localizedRegions.map(({ name, friendlyName }) => (
+                      <option key={name} value={name}>{friendlyName}</option>
+                    ))}
                   </select>
                 </div>
 

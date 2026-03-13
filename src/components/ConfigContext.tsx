@@ -1,7 +1,7 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect, useRef, useLayoutEffect, ReactNode } from "react";
 import { getChannelIdFromKey, deriveKeyFromChannelName } from "@/lib/meshcore";
-import { getRegionFriendlyNames } from "@/lib/regions";
+import { getLocalizedRegionFriendlyNames } from "@/lib/regions";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useLocale } from "./LocaleProvider";
 import Modal from "./Modal";
@@ -88,7 +88,7 @@ export function useConfig() {
 
 function ConfigPopover({ config, setConfig, onClose, anchorRef, onOpenKeyModal }: { config: Config, setConfig: (c: Config) => void, onClose: () => void, anchorRef: React.RefObject<HTMLElement | null>, onOpenKeyModal: () => void }) {
   const popoverRef = useRef<HTMLDivElement>(null);
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   const lastSeenOptions = getLastSeenOptions(t);
 
   // Click outside to close
@@ -146,7 +146,7 @@ function ConfigPopover({ config, setConfig, onClose, anchorRef, onOpenKeyModal }
           onChange={e => setConfig({ ...config, selectedRegion: e.target.value || undefined })}
         >
           <option value="">{t("config.selectRegion")}</option>
-          {getRegionFriendlyNames().map(({ name, friendlyName }) => (
+          {getLocalizedRegionFriendlyNames(locale).map(({ name, friendlyName }) => (
             <option key={name} value={name}>{friendlyName}</option>
           ))}
         </select>

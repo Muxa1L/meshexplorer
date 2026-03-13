@@ -5,6 +5,7 @@ import Link from "next/link";
 import moment from "moment";
 import { formatPublicKey } from "@/lib/meshcore";
 import { getNameIconLabel } from "@/lib/meshcore-map-nodeutils";
+import { getRegionDisplayName } from "@/lib/regions";
 import AdvertDetails from "@/components/AdvertDetails";
 import ContactQRCode from "@/components/ContactQRCode";
 import { useConfig, LAST_SEEN_OPTIONS } from "@/components/ConfigContext";
@@ -28,7 +29,7 @@ export default function MeshcoreNodePage() {
   const params = useParams();
   const publicKey = params.publicKey as string;
   const { config } = useConfig();
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
 
   // Use TanStack Query for node data
   const { 
@@ -219,7 +220,7 @@ export default function MeshcoreNodePage() {
                 </p>
                 {region && (
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {t("nodePage.region")}: <span className="font-medium capitalize">{region}</span>
+                    {t("nodePage.region")}: <span className="font-medium">{getRegionDisplayName(region, locale)}</span>
                   </p>
                 )}
                 <div className="flex flex-wrap gap-2 mt-2">
