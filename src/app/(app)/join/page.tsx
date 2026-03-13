@@ -91,6 +91,7 @@ export default function JoinPage() {
   const flashSteps = content.flashSteps;
   const connectSteps = content.connectSteps;
   const afterItems = content.afterItems;
+  const coverageSteps = content.coverageSteps;
 
   return (
     <div className="min-h-full overflow-y-auto bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.18),transparent_32%),radial-gradient(circle_at_top_right,rgba(34,197,94,0.1),transparent_26%),linear-gradient(to_bottom,rgba(248,250,252,1),rgba(241,245,249,1))] py-8 dark:bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.18),transparent_30%),radial-gradient(circle_at_top_right,rgba(6,182,212,0.12),transparent_24%),linear-gradient(to_bottom,rgba(10,15,28,1),rgba(17,24,39,1))]">
@@ -260,6 +261,35 @@ export default function JoinPage() {
                 <li key={item}>{item}</li>
               ))}
             </ul>
+          </Card>
+
+          <Card>
+            <h2 className="text-2xl font-semibold tracking-tight text-gray-950 dark:text-white">
+              {t("joinPage.coverageTitle")}
+            </h2>
+            <p className="mt-3 max-w-3xl text-gray-700 dark:text-gray-300">
+              {t("joinPage.coverageText")}
+            </p>
+
+            <ol className="mt-4 list-decimal space-y-3 pl-6 text-gray-700 dark:text-gray-300">
+              <li>
+                {coverageSteps[0]} {" "}
+                <ExternalLink href="https://github.com/mintylinux/Meshcore-Wardrive-Android/releases/latest">
+                  {t("joinPage.coverageAppLabel")}
+                </ExternalLink>
+              </li>
+              <li>
+                {coverageSteps[1]} {" "}
+              </li>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span className="rounded-md border border-brd-muted bg-th-body/40 px-2 py-1 text-xs sm:text-sm font-mono text-tx">
+                    https://meshcore-krd.ru/api/samples
+                </span>
+              </div>
+              <li>{coverageSteps[2]}</li>
+              <li>{coverageSteps[3]}</li>
+              <li>{coverageSteps[4]}</li>
+            </ol>
           </Card>
         </div>
       </div>
