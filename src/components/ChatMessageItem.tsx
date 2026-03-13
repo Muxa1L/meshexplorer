@@ -217,7 +217,7 @@ function ChatMessageItem({ msg, showErrorRow, variant = "default" }: ChatMessage
               {!isChannelVariant && parsed.sender && ": "}
               <ChatMessageContent text={parsed.text} />
             </div>
-            {isChannelVariant && renderMetaChips(parsed.msgType)}
+            {/* {isChannelVariant && renderMetaChips(parsed.msgType)} */}
             <div className={isChannelVariant ? "mt-3 border-t border-gray-100 pt-3 dark:border-neutral-800" : ""}>
               <PathVisualization 
                 paths={pathData} 

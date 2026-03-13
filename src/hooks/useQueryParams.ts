@@ -6,24 +6,7 @@ import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 export function useQueryParams<T extends Record<string, any>>(defaultValues: T = {} as T) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [internalState, setInternalState] = useState<T>(() => {
-    const result = { ...defaultValues };
-    
-    // Initialize from search params on mount
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      urlParams.forEach((value, key) => {
-        // Don't auto-convert 'q' (query) parameter to number since it should always be a string
-        if (key !== 'q' && !isNaN(Number(value)) && value !== '') {
-          result[key as keyof T] = Number(value) as T[keyof T];
-        } else {
-          result[key as keyof T] = value as T[keyof T];
-        }
-      });
-    }
-    
-    return result;
-  });
+  const [internalState, setInternalState] = useState<T>({ ...defaultValues });
   
   const internalStateRef = useRef(internalState);
   internalStateRef.current = internalState;
