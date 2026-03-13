@@ -44,7 +44,7 @@ export default function Header({ configButtonRef }: HeaderProps) {
   const [hiddenItems, setHiddenItems] = useState<NavItem[]>([]);
   const [showLocaleSwitch, setShowLocaleSwitch] = useState(true);
   const [showThemeButton, setShowThemeButton] = useState(true);
-  const [showInfoButton, setShowInfoButton] = useState(true);
+  // const [showInfoButton, setShowInfoButton] = useState(true);
   const [showSettingsButton, setShowSettingsButton] = useState(true);
   
   const headerRef = useRef<HTMLElement>(null);
@@ -65,7 +65,7 @@ export default function Header({ configButtonRef }: HeaderProps) {
       { href: "/stats", label: t("header.stats") },
       { href: "/packet-count", label: t("header.packetStats") },
       { href: "/search", label: t("header.search") },
-      { href: "/api-docs", label: t("header.apiDocs") },
+      // { href: "/api-docs", label: t("header.apiDocs") },
       // { href: "/wardrive", label: "Wardrive" },
       // { href: "/coverage", label: "Coverage" },
     ];
@@ -75,7 +75,7 @@ export default function Header({ configButtonRef }: HeaderProps) {
 
     setShowLocaleSwitch(headerWidth >= 900);
     setShowThemeButton(headerWidth >= 780);
-    setShowInfoButton(headerWidth >= 730);
+    // setShowInfoButton(headerWidth >= 730);
     setShowSettingsButton(headerWidth >= 680);
 
     const navWidth = navRef.current.offsetWidth;
@@ -165,7 +165,7 @@ export default function Header({ configButtonRef }: HeaderProps) {
     setTheme(next);
   };
 
-  const hasHiddenActions = !showLocaleSwitch || !showThemeButton || !showInfoButton || !showSettingsButton;
+  const hasHiddenActions = !showLocaleSwitch || !showThemeButton || !showSettingsButton;
 
   return (
     <>
@@ -242,16 +242,6 @@ export default function Header({ configButtonRef }: HeaderProps) {
               <span className="hidden sm:inline">{themeLabel}</span>
             </button>
           )}
-          {showInfoButton && (
-            <button
-              onClick={() => setInfoModalOpen(true)}
-              className="flex items-center gap-2 px-3 py-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800"
-              aria-label={t("header.openInfo", { appName: getAppName() })}
-            >
-              <InformationCircleIcon className="h-6 w-6" />
-              <span className="hidden sm:inline">{t("common.info")}</span>
-            </button>
-          )}
           {showSettingsButton && (
             <button
               ref={configButtonRef || contextButtonRef}
@@ -311,18 +301,6 @@ export default function Header({ configButtonRef }: HeaderProps) {
                     >
                       {(() => { const Icon = THEME_ICON[theme]; return <Icon className="h-5 w-5" />; })()}
                       <span>{t("header.themeTitle", { theme: themeLabel })}</span>
-                    </button>
-                  )}
-                  {!showInfoButton && (
-                    <button
-                      onClick={() => {
-                        setInfoModalOpen(true);
-                        setActionsMenuOpen(false);
-                      }}
-                      className="flex w-full items-center gap-3 px-4 py-2 text-sm text-gray-800 transition-colors hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-neutral-700"
-                    >
-                      <InformationCircleIcon className="h-5 w-5" />
-                      <span>{t("common.info")}</span>
                     </button>
                   )}
                   {!showSettingsButton && (
