@@ -115,6 +115,7 @@ export const ruMessages = {
     channels: "Каналы",
     allMessages: "Все сообщения",
     aggregatedFeed: "Все известные каналы в одной ленте",
+    jumpToLatest: "К последнему сообщению",
     secureChannel: "Зашифрованный канал",
     liveFeed: "Онлайн",
     refreshMessages: "Обновить сообщения чата",

@@ -115,6 +115,7 @@ export const enMessages = {
     channels: "Channels",
     allMessages: "All Messages",
     aggregatedFeed: "All known channels in one timeline",
+    jumpToLatest: "Last message",
     secureChannel: "Encrypted channel",
     liveFeed: "Live",
     refreshMessages: "Refresh chat messages",

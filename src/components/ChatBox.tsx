@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import { MinusIcon, PlusIcon } from "@heroicons/react/24/outline";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowDownIcon, MinusIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { useConfig } from "./ConfigContext";
 import { getChannelIdFromKey } from "@/lib/meshcore";
 import ChatMessageItem from "./ChatMessageItem";
@@ -80,6 +80,12 @@ export default function ChatBox({
   const setSelectedTab = (tabIndex: number) => setParam('selectedTab', tabIndex);
   
   const [minimized, setMinimized] = useState(!startExpanded); // Use startExpanded as default for minimized state
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false);
+
+  const expandedScrollRef = useRef<HTMLDivElement>(null);
+  const previousExpandedMessageCountRef = useRef(0);
+  const previousExpandedScrollHeightRef = useRef<number | null>(null);
+  const shouldStickToBottomRef = useRef(true);
 
   const selectedKey = allTabs[selectedTab];
   const channelId = selectedKey.isAllMessages
@@ -124,7 +130,93 @@ export default function ChatBox({
 
   const selectedChannelLabel = getChannelDisplayLabel(selectedKey);
   const isExpandedLayout = startExpanded;
-  const orderedMessages = isExpandedLayout ? messages : messages.toReversed();
+  const expandedMessages = useMemo(() => messages.toReversed(), [messages]);
+
+  const updateExpandedScrollState = useCallback(() => {
+    const container = expandedScrollRef.current;
+    if (!container) {
+      return;
+    }
+
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    const isNearBottom = distanceFromBottom <= 160;
+
+    shouldStickToBottomRef.current = isNearBottom;
+    setShowJumpToLatest(!isNearBottom && expandedMessages.length > 0);
+  }, [expandedMessages.length]);
+
+  const scrollToLatestMessage = useCallback((behavior: ScrollBehavior = "smooth") => {
+    const container = expandedScrollRef.current;
+    if (!container) {
+      return;
+    }
+
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior,
+    });
+  }, []);
+
+  const handleExpandedScroll = useCallback(() => {
+    const container = expandedScrollRef.current;
+    if (!container) {
+      return;
+    }
+
+    updateExpandedScrollState();
+
+    if (container.scrollTop <= 180 && hasMore && !isLoadingMore && !loading) {
+      previousExpandedScrollHeightRef.current = container.scrollHeight;
+      loadMore();
+    }
+  }, [hasMore, isLoadingMore, loadMore, loading, updateExpandedScrollState]);
+
+  useEffect(() => {
+    if (!isExpandedLayout || !config?.selectedRegion) {
+      return;
+    }
+
+    previousExpandedScrollHeightRef.current = null;
+    previousExpandedMessageCountRef.current = 0;
+    shouldStickToBottomRef.current = true;
+    setShowJumpToLatest(false);
+
+    const frame = requestAnimationFrame(() => {
+      scrollToLatestMessage("auto");
+      updateExpandedScrollState();
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [config?.selectedRegion, isExpandedLayout, scrollToLatestMessage, selectedTab, updateExpandedScrollState]);
+
+  useEffect(() => {
+    if (!isExpandedLayout || !config?.selectedRegion) {
+      return;
+    }
+
+    const frame = requestAnimationFrame(() => {
+      const container = expandedScrollRef.current;
+      if (!container) {
+        previousExpandedMessageCountRef.current = expandedMessages.length;
+        return;
+      }
+
+      const previousMessageCount = previousExpandedMessageCountRef.current;
+
+      if (previousExpandedScrollHeightRef.current !== null) {
+        const previousHeight = previousExpandedScrollHeightRef.current;
+        previousExpandedScrollHeightRef.current = null;
+        container.scrollTop += container.scrollHeight - previousHeight;
+      } else if (expandedMessages.length > previousMessageCount && shouldStickToBottomRef.current) {
+        container.scrollTo({ top: container.scrollHeight, behavior: "auto" });
+      }
+
+      previousExpandedMessageCountRef.current = expandedMessages.length;
+      updateExpandedScrollState();
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [config?.selectedRegion, expandedMessages.length, isExpandedLayout, updateExpandedScrollState]);
 
   const LoadingIndicator = () => (
     <div className="flex justify-center py-4">
@@ -210,7 +302,7 @@ export default function ChatBox({
           </div>
         </aside>
 
-        <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-neutral-50/80 dark:bg-neutral-950">
+        <section className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-neutral-50/80 dark:bg-neutral-950">
           <div className="flex shrink-0 items-center justify-between gap-4 border-b border-gray-200/80 bg-white/85 px-4 py-4 backdrop-blur dark:border-neutral-800 dark:bg-neutral-900/85 sm:px-6">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
@@ -237,7 +329,11 @@ export default function ChatBox({
           </div>
 
           {config?.selectedRegion ? (
-            <div className="min-h-0 flex-1 overflow-y-auto bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.08),_transparent_35%),linear-gradient(to_bottom,_rgba(255,255,255,0.96),_rgba(248,250,252,0.96))] px-3 py-4 dark:bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.12),_transparent_35%),linear-gradient(to_bottom,_rgba(10,10,10,0.98),_rgba(23,23,23,0.98))] sm:px-5 lg:px-6">
+            <div
+              ref={expandedScrollRef}
+              onScroll={handleExpandedScroll}
+              className="min-h-0 flex-1 overflow-y-auto bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.08),_transparent_35%),linear-gradient(to_bottom,_rgba(255,255,255,0.96),_rgba(248,250,252,0.96))] px-3 py-4 dark:bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.12),_transparent_35%),linear-gradient(to_bottom,_rgba(10,10,10,0.98),_rgba(23,23,23,0.98))] sm:px-5 lg:px-6"
+            >
               <div className="mx-auto flex w-full max-w-4xl flex-col gap-3">
                 {loading && messages.length === 0 && (
                   <div className="flex min-h-[240px] items-center justify-center rounded-3xl border border-dashed border-gray-300 bg-white/70 dark:border-neutral-700 dark:bg-neutral-900/60">
@@ -245,9 +341,11 @@ export default function ChatBox({
                   </div>
                 )}
 
-                {orderedMessages.map((msg, index) => {
+                {isLoadingMore && messages.length > 0 && <LoadingIndicator />}
+
+                {expandedMessages.map((msg, index) => {
                   const currentDay = getDayLabel(msg.ingest_timestamp, locale);
-                  const previousDay = index > 0 ? getDayLabel(orderedMessages[index - 1].ingest_timestamp, locale) : null;
+                  const previousDay = index > 0 ? getDayLabel(expandedMessages[index - 1].ingest_timestamp, locale) : null;
                   const shouldRenderDivider = currentDay !== previousDay;
 
                   return (
@@ -277,12 +375,6 @@ export default function ChatBox({
                     <p className="mt-2 max-w-md text-sm text-gray-500 dark:text-gray-400">{t("chatBox.noMessages")}</p>
                   </div>
                 )}
-
-                {isLoadingMore && <LoadingIndicator />}
-
-                {hasMore && (
-                  <div ref={loadMoreTriggerRef} className="h-2" />
-                )}
               </div>
             </div>
           ) : (
@@ -293,6 +385,21 @@ export default function ChatBox({
                 </p>
                 <RegionSelector className="w-full" />
               </div>
+            </div>
+          )}
+
+          {config?.selectedRegion && showJumpToLatest && (
+            <div className="pointer-events-none absolute bottom-5 right-5 z-20">
+              <button
+                type="button"
+                onClick={() => scrollToLatestMessage("smooth")}
+                className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/30 transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 dark:focus:ring-offset-neutral-950"
+                aria-label={t("chatBox.jumpToLatest")}
+                title={t("chatBox.jumpToLatest")}
+              >
+                <ArrowDownIcon className="h-4 w-4" />
+                <span>{t("chatBox.jumpToLatest")}</span>
+              </button>
             </div>
           )}
         </section>
