@@ -113,6 +113,9 @@ export const enMessages = {
   chatBox: {
     title: "MeshCore Chat",
     channels: "Channels",
+    showChannels: "Show channels",
+    hideChannels: "Hide channels",
+    closeChannels: "Close channels",
     allMessages: "All Messages",
     aggregatedFeed: "All known channels in one timeline",
     jumpToLatest: "Last message",

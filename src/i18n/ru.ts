@@ -113,6 +113,9 @@ export const ruMessages = {
   chatBox: {
     title: "Чат MeshCore",
     channels: "Каналы",
+    showChannels: "Показать каналы",
+    hideChannels: "Скрыть каналы",
+    closeChannels: "Закрыть каналы",
     allMessages: "Все сообщения",
     aggregatedFeed: "Все известные каналы в одной ленте",
     jumpToLatest: "К последнему сообщению",

@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDownIcon, MinusIcon, PlusIcon } from "@heroicons/react/24/outline";
+import { ArrowDownIcon, Bars3Icon, MinusIcon, PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useConfig } from "./ConfigContext";
 import { getChannelIdFromKey } from "@/lib/meshcore";
 import ChatMessageItem from "./ChatMessageItem";
@@ -80,6 +80,8 @@ export default function ChatBox({
   const setSelectedTab = (tabIndex: number) => setParam('selectedTab', tabIndex);
   
   const [minimized, setMinimized] = useState(!startExpanded); // Use startExpanded as default for minimized state
+  const [isCompactViewport, setIsCompactViewport] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
 
   const expandedScrollRef = useRef<HTMLDivElement>(null);
@@ -89,6 +91,27 @@ export default function ChatBox({
   const channelId = selectedKey.isAllMessages
     ? undefined
     : getChannelIdFromKey(selectedKey.privateKey).toUpperCase();
+
+  useEffect(() => {
+    if (!startExpanded || typeof window === "undefined") {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(max-width: 1023px)");
+
+    const handleViewportChange = (event: MediaQueryList | MediaQueryListEvent) => {
+      const matches = event.matches;
+      setIsCompactViewport(matches);
+      setIsSidebarOpen(!matches);
+    };
+
+    handleViewportChange(mediaQuery);
+
+    const listener = (event: MediaQueryListEvent) => handleViewportChange(event);
+    mediaQuery.addEventListener("change", listener);
+
+    return () => mediaQuery.removeEventListener("change", listener);
+  }, [startExpanded]);
   
   // Use the new chat messages hook
   const {
@@ -129,6 +152,7 @@ export default function ChatBox({
   const selectedChannelLabel = getChannelDisplayLabel(selectedKey);
   const isExpandedLayout = startExpanded;
   const expandedMessages = useMemo(() => messages.toReversed(), [messages]);
+  const isSidebarVisible = isExpandedLayout ? (!isCompactViewport || isSidebarOpen) : true;
 
   const updateExpandedScrollState = useCallback(() => {
     const container = expandedScrollRef.current;
@@ -215,7 +239,20 @@ export default function ChatBox({
   if (isExpandedLayout) {
     return (
       <div className={`flex h-full min-h-0 w-full overflow-hidden rounded-[28px] border border-gray-200/80 bg-white/90 shadow-[0_24px_80px_-32px_rgba(15,23,42,0.35)] backdrop-blur dark:border-neutral-800 dark:bg-neutral-900/95 ${className}`}>
-        <aside className="flex w-full shrink-0 flex-col border-b border-gray-200/80 bg-gradient-to-b from-slate-50 to-white dark:border-neutral-800 dark:from-neutral-900 dark:to-neutral-950 lg:w-[320px] lg:border-b-0 lg:border-r">
+        {isCompactViewport && isSidebarOpen && (
+          <button
+            type="button"
+            aria-label={t("chatBox.closeChannels")}
+            className="absolute inset-0 z-20 bg-black/40 backdrop-blur-[1px] lg:hidden"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
+
+        <aside className={`z-30 flex w-[320px] max-w-[calc(100%-1rem)] shrink-0 flex-col border-gray-200/80 bg-gradient-to-b from-slate-50 to-white dark:border-neutral-800 dark:from-neutral-900 dark:to-neutral-950 ${
+          isCompactViewport
+            ? `absolute inset-y-0 left-0 border-r shadow-2xl transition-transform duration-300 ${isSidebarVisible ? "translate-x-0" : "-translate-x-full"}`
+            : "relative border-b lg:border-b-0 lg:border-r"
+        }`}>
           <div className="border-b border-gray-200/80 px-5 py-5 dark:border-neutral-800">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -239,6 +276,17 @@ export default function ChatBox({
               >
                 +
               </button>
+              {isCompactViewport && (
+                <button
+                  type="button"
+                  className="rounded-2xl border border-gray-200 bg-white p-2 text-gray-600 transition hover:border-blue-300 hover:text-blue-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:text-blue-400"
+                  onClick={() => setIsSidebarOpen(false)}
+                  title={t("chatBox.closeChannels")}
+                  aria-label={t("chatBox.closeChannels")}
+                >
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+              )}
             </div>
           </div>
 
@@ -257,7 +305,12 @@ export default function ChatBox({
                         ? "border-blue-500 bg-blue-50 shadow-sm dark:border-blue-500/70 dark:bg-blue-500/10"
                         : "border-transparent bg-transparent hover:border-gray-200 hover:bg-gray-50 dark:hover:border-neutral-700 dark:hover:bg-neutral-800/70"
                     }`}
-                    onClick={() => setSelectedTab(idx)}
+                    onClick={() => {
+                      setSelectedTab(idx);
+                      if (isCompactViewport) {
+                        setIsSidebarOpen(false);
+                      }
+                    }}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-semibold ${
@@ -292,16 +345,29 @@ export default function ChatBox({
 
         <section className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-neutral-50/80 dark:bg-neutral-950">
           <div className="flex shrink-0 items-center justify-between gap-4 border-b border-gray-200/80 bg-white/85 px-4 py-4 backdrop-blur dark:border-neutral-800 dark:bg-neutral-900/85 sm:px-6">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
+            <div className="min-w-0 flex items-center gap-3">
+              <button
+                type="button"
+                className="inline-flex shrink-0 items-center gap-2 rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 transition hover:border-blue-300 hover:text-blue-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:text-blue-400"
+                onClick={() => setIsSidebarOpen((open) => !open)}
+                aria-label={isSidebarVisible ? t("chatBox.hideChannels") : t("chatBox.showChannels")}
+                title={isSidebarVisible ? t("chatBox.hideChannels") : t("chatBox.showChannels")}
+              >
+                <Bars3Icon className="h-5 w-5" />
+                <span className="hidden sm:inline">{t("chatBox.channels")}</span>
+              </button>
+
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
                 <span className="inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
-                <p className="truncate text-lg font-semibold text-gray-900 dark:text-white">
-                  {selectedChannelLabel}
+                  <p className="truncate text-lg font-semibold text-gray-900 dark:text-white">
+                    {selectedChannelLabel}
+                  </p>
+                </div>
+                <p className="mt-1 truncate text-sm text-gray-500 dark:text-gray-400">
+                  {selectedKey.isAllMessages ? t("chatBox.aggregatedFeed") : getChannelSubtitle(selectedKey, t)}
                 </p>
               </div>
-              <p className="mt-1 truncate text-sm text-gray-500 dark:text-gray-400">
-                {selectedKey.isAllMessages ? t("chatBox.aggregatedFeed") : getChannelSubtitle(selectedKey, t)}
-              </p>
             </div>
             <div className="flex items-center gap-2">
               {config?.selectedRegion && (
