@@ -162,25 +162,6 @@ function ChatMessageItem({ msg, showErrorRow, variant = "default" }: ChatMessage
 
   const isChannelVariant = variant === "channel";
 
-  const renderMetaChips = (messageType?: string | number) => (
-    <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400">
-      {messageType ? (
-        <span className="rounded-full bg-white/80 px-2.5 py-1 font-medium shadow-sm ring-1 ring-gray-200 dark:bg-neutral-900 dark:ring-neutral-700">
-          {t("chatMessage.type")}: {messageType}
-        </span>
-      ) : null}
-      <span className="rounded-full bg-white/80 px-2.5 py-1 font-medium shadow-sm ring-1 ring-gray-200 dark:bg-neutral-900 dark:ring-neutral-700">
-        {t("chatMessage.channel")}: {msg.channel_hash}
-      </span>
-      {pathData.length > 0 ? (
-        <span className="rounded-full bg-white/80 px-2.5 py-1 font-medium shadow-sm ring-1 ring-gray-200 dark:bg-neutral-900 dark:ring-neutral-700">
-          {t("chatMessage.heardRepeats", { count: pathData.length })}
-        </span>
-      ) : null}
-    </div>
-  );
-
-
   if (parsed) {
     const messageTimestamp = new Date(parsed.timestamp * 1000).toISOString();
     const senderLabel = parsed.sender || msg.channel_hash;
@@ -220,10 +201,6 @@ function ChatMessageItem({ msg, showErrorRow, variant = "default" }: ChatMessage
               </div>
             </div>
             
-            
-            
-            
-            {/* {isChannelVariant && renderMetaChips(parsed.msgType)} */}
             <div className={isChannelVariant ? "mt-3 border-t border-gray-100 pt-3 dark:border-neutral-800" : ""}>
               <PathVisualization 
                 paths={pathData} 
@@ -243,11 +220,6 @@ function ChatMessageItem({ msg, showErrorRow, variant = "default" }: ChatMessage
     if (showErrorRow) {
       return (
         <article className={isChannelVariant ? "group flex gap-3 rounded-[26px] px-1 py-2" : "border-b border-red-200 pb-2 mb-2 bg-red-50 dark:border-red-800 dark:bg-red-900/30"}>
-          {/* {isChannelVariant ? (
-            <div className="mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-red-500/10 text-sm font-semibold text-red-600 ring-1 ring-red-100 dark:bg-red-500/10 dark:text-red-300 dark:ring-red-500/20">
-              !
-            </div>
-          ) : null} */}
           <div className="min-w-0 flex-1">
             <div className={isChannelVariant ? "mb-2 flex flex-wrap items-center gap-x-2 gap-y-1" : "text-xs text-gray-400 flex items-center gap-2"}>
               <span className={isChannelVariant ? "font-semibold text-gray-900 dark:text-white" : ""}>{msg.channel_hash}</span>
@@ -260,7 +232,6 @@ function ChatMessageItem({ msg, showErrorRow, variant = "default" }: ChatMessage
               <div className="text-xs text-red-600 dark:text-red-300">
                 {error}
               </div>
-              {/* {isChannelVariant && renderMetaChips()} */}
               <div className={isChannelVariant ? "mt-3 border-t border-red-100 pt-3 dark:border-red-900/50" : ""}>
                 <PathVisualization 
                   paths={pathData} 
@@ -297,7 +268,6 @@ function ChatMessageItem({ msg, showErrorRow, variant = "default" }: ChatMessage
           </div>
           <div className={isChannelVariant ? "rounded-[24px] rounded-tl-md border border-gray-200/80 bg-white/95 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/95" : ""}>
             <div className="my-2 h-5 w-full animate-pulse rounded bg-gray-200 dark:bg-neutral-800" />
-            {/* {isChannelVariant && renderMetaChips()} */}
             <div className={isChannelVariant ? "mt-3 border-t border-gray-100 pt-3 dark:border-neutral-800" : ""}>
               <PathVisualization 
                 paths={pathData} 
