@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDownIcon, Bars3Icon, MinusIcon, PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { ArrowDownIcon, ArrowUpIcon, Bars3Icon, MinusIcon, PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useConfig } from "./ConfigContext";
 import { getChannelIdFromKey } from "@/lib/meshcore";
 import ChatMessageItem from "./ChatMessageItem";
@@ -9,6 +9,7 @@ import RegionSelector from "./RegionSelector";
 import { getRegionDisplayName } from "@/lib/regions";
 import { useChatMessages } from "@/hooks/useChatMessages";
 import { useIntersectionObserver } from "@/hooks/useIntersectionObserver";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useQueryParams } from "@/hooks/useQueryParams";
 import { useLocale } from "./LocaleProvider";
 
@@ -28,6 +29,8 @@ interface TabItem {
 interface ChatBoxQuery {
   selectedTab?: number;
 }
+
+type MessageOrder = "oldest" | "newest";
 
 function getChannelDisplayLabel(tab: TabItem) {
   return tab.channelName || getChannelIdFromKey(tab.privateKey).toUpperCase();
@@ -83,9 +86,12 @@ export default function ChatBox({
   const [isCompactViewport, setIsCompactViewport] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
+  const [messageOrder, setMessageOrder] = useLocalStorage<MessageOrder>("meshExplorerChatMessageOrder", "oldest");
 
   const expandedScrollRef = useRef<HTMLDivElement>(null);
   const previousExpandedScrollHeightRef = useRef<number | null>(null);
+  const lastExpandedScrollMetricsRef = useRef<{ scrollHeight: number; firstMessageId?: string } | null>(null);
+  const isNearLatestRef = useRef(true);
 
   const selectedKey = allTabs[selectedTab];
   const channelId = selectedKey.isAllMessages
@@ -151,7 +157,11 @@ export default function ChatBox({
 
   const selectedChannelLabel = getChannelDisplayLabel(selectedKey);
   const isExpandedLayout = startExpanded;
-  const expandedMessages = useMemo(() => messages.toReversed(), [messages]);
+  const orderedMessages = useMemo(
+    () => (messageOrder === "oldest" ? messages.toReversed() : messages),
+    [messageOrder, messages]
+  );
+  const JumpToLatestIcon = messageOrder === "oldest" ? ArrowDownIcon : ArrowUpIcon;
   const isSidebarVisible = isExpandedLayout ? (!isCompactViewport || isSidebarOpen) : true;
 
   const updateExpandedScrollState = useCallback(() => {
@@ -160,11 +170,14 @@ export default function ChatBox({
       return;
     }
 
-    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
-    const isNearBottom = distanceFromBottom <= 160;
+    const distanceFromLatest = messageOrder === "oldest"
+      ? container.scrollHeight - container.scrollTop - container.clientHeight
+      : container.scrollTop;
+    const isNearLatest = distanceFromLatest <= 160;
 
-    setShowJumpToLatest(!isNearBottom && expandedMessages.length > 0);
-  }, [expandedMessages.length]);
+    isNearLatestRef.current = isNearLatest;
+    setShowJumpToLatest(!isNearLatest && orderedMessages.length > 0);
+  }, [messageOrder, orderedMessages.length]);
 
   const scrollToLatestMessage = useCallback((behavior: ScrollBehavior = "smooth") => {
     const container = expandedScrollRef.current;
@@ -173,10 +186,10 @@ export default function ChatBox({
     }
 
     container.scrollTo({
-      top: container.scrollHeight,
+      top: messageOrder === "oldest" ? container.scrollHeight : 0,
       behavior,
     });
-  }, []);
+  }, [messageOrder]);
 
   const handleExpandedScroll = useCallback(() => {
     const container = expandedScrollRef.current;
@@ -186,11 +199,15 @@ export default function ChatBox({
 
     updateExpandedScrollState();
 
-    if (container.scrollTop <= 180 && hasMore && !isLoadingMore && !loading) {
-      previousExpandedScrollHeightRef.current = container.scrollHeight;
+    const shouldLoadMore = messageOrder === "oldest"
+      ? container.scrollTop <= 180
+      : container.scrollHeight - container.scrollTop - container.clientHeight <= 180;
+
+    if (shouldLoadMore && hasMore && !isLoadingMore && !loading) {
+      previousExpandedScrollHeightRef.current = messageOrder === "oldest" ? container.scrollHeight : null;
       loadMore();
     }
-  }, [hasMore, isLoadingMore, loadMore, loading, updateExpandedScrollState]);
+  }, [hasMore, isLoadingMore, loadMore, loading, messageOrder, updateExpandedScrollState]);
 
   useEffect(() => {
     if (!isExpandedLayout || !config?.selectedRegion) {
@@ -198,14 +215,16 @@ export default function ChatBox({
     }
 
     previousExpandedScrollHeightRef.current = null;
+    lastExpandedScrollMetricsRef.current = null;
     setShowJumpToLatest(false);
 
     const frame = requestAnimationFrame(() => {
+      scrollToLatestMessage("auto");
       updateExpandedScrollState();
     });
 
     return () => cancelAnimationFrame(frame);
-  }, [config?.selectedRegion, isExpandedLayout, selectedTab, updateExpandedScrollState]);
+  }, [config?.selectedRegion, isExpandedLayout, messageOrder, scrollToLatestMessage, selectedTab, updateExpandedScrollState]);
 
   useEffect(() => {
     if (!isExpandedLayout || !config?.selectedRegion) {
@@ -218,17 +237,64 @@ export default function ChatBox({
         return;
       }
 
+      const previousMetrics = lastExpandedScrollMetricsRef.current;
+      const currentFirstMessageId = orderedMessages[0]?.message_id;
+
       if (previousExpandedScrollHeightRef.current !== null) {
         const previousHeight = previousExpandedScrollHeightRef.current;
         previousExpandedScrollHeightRef.current = null;
         container.scrollTop += container.scrollHeight - previousHeight;
+      } else if (
+        messageOrder === "newest"
+        && previousMetrics
+        && previousMetrics.firstMessageId !== currentFirstMessageId
+        && !isNearLatestRef.current
+      ) {
+        container.scrollTop += container.scrollHeight - previousMetrics.scrollHeight;
       }
 
       updateExpandedScrollState();
+      lastExpandedScrollMetricsRef.current = {
+        scrollHeight: container.scrollHeight,
+        firstMessageId: currentFirstMessageId,
+      };
     });
 
     return () => cancelAnimationFrame(frame);
-  }, [config?.selectedRegion, expandedMessages.length, isExpandedLayout, updateExpandedScrollState]);
+  }, [config?.selectedRegion, isExpandedLayout, messageOrder, orderedMessages, updateExpandedScrollState]);
+
+  const OrderToggle = ({ compact = false }: { compact?: boolean }) => (
+    <div
+      className={`inline-flex items-center rounded-2xl border border-gray-200 bg-white p-1 dark:border-neutral-700 dark:bg-neutral-900 ${compact ? "" : "shadow-sm"}`}
+      role="group"
+      aria-label={t("chatBox.messageOrder")}
+    >
+      <button
+        type="button"
+        className={`rounded-xl px-3 py-1.5 text-xs font-medium transition ${messageOrder === "oldest"
+          ? "bg-blue-600 text-white"
+          : "text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400"
+        }`}
+        onClick={() => setMessageOrder("oldest")}
+        aria-pressed={messageOrder === "oldest"}
+        title={t("chatBox.oldestFirst")}
+      >
+        {t("chatBox.oldestFirst")}
+      </button>
+      <button
+        type="button"
+        className={`rounded-xl px-3 py-1.5 text-xs font-medium transition ${messageOrder === "newest"
+          ? "bg-blue-600 text-white"
+          : "text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400"
+        }`}
+        onClick={() => setMessageOrder("newest")}
+        aria-pressed={messageOrder === "newest"}
+        title={t("chatBox.newestFirst")}
+      >
+        {t("chatBox.newestFirst")}
+      </button>
+    </div>
+  );
 
   const LoadingIndicator = () => (
     <div className="flex justify-center py-4">
@@ -370,6 +436,7 @@ export default function ChatBox({
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {config?.selectedRegion && <OrderToggle />}
               {config?.selectedRegion && (
                 <RefreshButton
                   onClick={handleRefresh}
@@ -397,9 +464,9 @@ export default function ChatBox({
 
                 {isLoadingMore && messages.length > 0 && <LoadingIndicator />}
 
-                {expandedMessages.map((msg, index) => {
+                {orderedMessages.map((msg, index) => {
                   const currentDay = getDayLabel(msg.ingest_timestamp, locale);
-                  const previousDay = index > 0 ? getDayLabel(expandedMessages[index - 1].ingest_timestamp, locale) : null;
+                  const previousDay = index > 0 ? getDayLabel(orderedMessages[index - 1].ingest_timestamp, locale) : null;
                   const shouldRenderDivider = currentDay !== previousDay;
 
                   return (
@@ -451,7 +518,7 @@ export default function ChatBox({
                 aria-label={t("chatBox.jumpToLatest")}
                 title={t("chatBox.jumpToLatest")}
               >
-                <ArrowDownIcon className="h-4 w-4" />
+                <JumpToLatestIcon className="h-4 w-4" />
                 <span>{t("chatBox.jumpToLatest")}</span>
               </button>
             </div>
@@ -484,6 +551,7 @@ export default function ChatBox({
           </span>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          {!minimized && config?.selectedRegion && <OrderToggle compact={true} />}
           {!minimized && config?.selectedRegion && (
             <RefreshButton
               onClick={handleRefresh}
@@ -549,7 +617,7 @@ export default function ChatBox({
                )}
                
                {/* Messages */}
-               {(startExpanded ? messages : messages.toReversed()).map((msg, i) => (
+               {orderedMessages.map((msg) => (
                  <ChatMessageItem
                    key={`${msg.message_id}-${msg.origin_path_info?.length || 0}`}
                    msg={msg}

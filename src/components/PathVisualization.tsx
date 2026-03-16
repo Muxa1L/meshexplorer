@@ -287,6 +287,7 @@ export default function PathVisualization({
               <span>{showGraph ? t("path.hideGraph") : t("path.showGraph")}</span>
             </button>
           )}
+          
           {packetHash && (
             <a
               href={`https://analyzer.letsme.sh/packets?packet_hash=${packetHash}`}
