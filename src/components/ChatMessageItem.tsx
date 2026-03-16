@@ -194,29 +194,35 @@ function ChatMessageItem({ msg, showErrorRow, variant = "default" }: ChatMessage
         ) : null} */}
 
         <div className="min-w-0 flex-1">
-          <div className={isChannelVariant ? "mb-2 flex flex-wrap items-center gap-x-2 gap-y-1" : "text-xs text-gray-400 flex items-center gap-2"}>
-            {parsed.sender ? (
-              <NodeLinkWithHover 
-                nodeName={parsed.sender}
-                exact={true}
-              >
-                <span className={isChannelVariant ? "font-semibold text-gray-900 dark:text-white" : ""}>{parsed.sender}</span>
-              </NodeLinkWithHover>
-            ) : (
-              isChannelVariant ? <span className="font-semibold text-gray-900 dark:text-white">{senderLabel}</span> : null
-            )}
-            <span className={isChannelVariant ? "text-xs text-gray-500 dark:text-gray-400" : "text-xs text-gray-500"}>
-              {isChannelVariant ? formatTimeOnly(messageTimestamp, locale) : formatLocalTime(messageTimestamp)}
-            </span>
-            {!isChannelVariant && <span className="text-xs text-gray-500">{t("chatMessage.type")}: {parsed.msgType}</span>}
-            {!isChannelVariant && <span className="text-xs text-gray-500 ml-2">{t("chatMessage.channel")}: {msg.channel_hash}</span>}
-          </div>
+          
 
           <div className={isChannelVariant ? "rounded-[24px] rounded-tl-md border border-gray-200/80 bg-white/95 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/95" : "break-words whitespace-pre-wrap"}>
-            <div className="break-words whitespace-pre-wrap leading-6 text-gray-800 dark:text-gray-100">
-              {!isChannelVariant && parsed.sender && ": "}
-              <ChatMessageContent text={parsed.text} />
+            <div className={isChannelVariant ? "mb-2 flex flex-wrap items-center gap-x-2 gap-y-1" : "text-xs text-gray-400 flex items-center gap-2"}>
+              <span className={isChannelVariant ? "text-xs text-gray-500 dark:text-gray-400" : "text-xs text-gray-500"}>
+                {isChannelVariant ? formatTimeOnly(messageTimestamp, locale) : formatLocalTime(messageTimestamp)}
+              </span>
+              {parsed.sender ? (
+                <NodeLinkWithHover 
+                  nodeName={parsed.sender}
+                  exact={true}
+                >
+                  <span className={isChannelVariant ? "font-semibold text-gray-900 dark:text-white" : ""}>{parsed.sender}</span>
+                </NodeLinkWithHover>
+              ) : (
+                isChannelVariant ? <span className="font-semibold text-gray-900 dark:text-white">{senderLabel}</span> : null
+              )}
+              
+              {!isChannelVariant && <span className="text-xs text-gray-500">{t("chatMessage.type")}: {parsed.msgType}</span>}
+              {!isChannelVariant && <span className="text-xs text-gray-500 ml-2">{t("chatMessage.channel")}: {msg.channel_hash}</span>}
+              <div className="break-words whitespace-pre-wrap leading-6 text-gray-800 dark:text-gray-100">
+                {!isChannelVariant && parsed.sender && ": "}
+                <ChatMessageContent text={parsed.text} />
+              </div>
             </div>
+            
+            
+            
+            
             {/* {isChannelVariant && renderMetaChips(parsed.msgType)} */}
             <div className={isChannelVariant ? "mt-3 border-t border-gray-100 pt-3 dark:border-neutral-800" : ""}>
               <PathVisualization 
