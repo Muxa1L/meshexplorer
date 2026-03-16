@@ -23,7 +23,7 @@ export function groupPathsByStructure(paths: PathData[]): PathGroup[] {
   const pathGroups: PathGroup[] = [];
   
   paths.forEach(({ origin, pubkey, path }, index) => {
-    // Parse path into 2-character slices and include pubkey as final hop
+    // Parse path into 2-character slices and include observer pubkey as the final hop
     const pathSlices = path.match(/.{1,2}/g) || [];
     const pubkeyPrefix = pubkey.substring(0, 2);
     const fullPathSlices = [...pathSlices, pubkeyPrefix];

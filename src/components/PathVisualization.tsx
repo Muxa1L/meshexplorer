@@ -61,6 +61,26 @@ export default function PathVisualization({
     return buildTreeFromPathGroups(pathGroups, initiatingNodeKey);
   }, [showGraph, pathsCount, pathGroups, initiatingNodeKey]);
 
+  const observerNodesByPrefix = useMemo(() => {
+    const mapping = new Map<string, Array<{ name: string; publicKey: string }>>();
+
+    paths.forEach(({ origin, pubkey }) => {
+      const prefix = pubkey.substring(0, 2);
+      const nodeName = origin?.trim() || pubkey;
+      const existing = mapping.get(prefix) || [];
+
+      if (!existing.some((node) => node.publicKey === pubkey)) {
+        existing.push({
+          name: nodeName,
+          publicKey: pubkey,
+        });
+        mapping.set(prefix, existing);
+      }
+    });
+
+    return mapping;
+  }, [paths]);
+
   // Extract unique prefixes from tree data for name lookups
   const uniquePrefixes = useMemo(() => 
     extractUniquePrefixes(treeData), 
@@ -68,10 +88,10 @@ export default function PathVisualization({
   );
 
   // Use the new useMeshcoreSearches hook to handle multiple prefix searches
-  // Filter out "??" prefix and only search for valid hex prefixes
+  // Filter out the root placeholder and final observer hops; repeater search is only for intermediate nodes
   const searches = useMemo(() => 
     uniquePrefixes
-      .filter(prefix => prefix !== "??") // Don't search for placeholder prefix
+      .filter(prefix => prefix !== "??" && !observerNodesByPrefix.has(prefix))
       .map(prefix => ({
         query: prefix,
         exact: false,
@@ -81,7 +101,7 @@ export default function PathVisualization({
         region: config?.selectedRegion,
         enabled: showGraph && prefix.length > 0
       }))
-  , [uniquePrefixes, showGraph, config?.lastSeen, config?.selectedRegion]);
+  , [uniquePrefixes, observerNodesByPrefix, showGraph, config?.lastSeen, config?.selectedRegion]);
 
   const searchResults = useMeshcoreSearches({ searches });
 
@@ -89,8 +109,8 @@ export default function PathVisualization({
   const prefixToNodes = useMemo(() => {
     const mapping = new Map<string, Array<{ name: string; publicKey: string }>>();
     
-    // Create searchable prefixes (excluding "??")
-    const searchablePrefixes = uniquePrefixes.filter(prefix => prefix !== "??");
+    // Create searchable prefixes for repeater hops only
+    const searchablePrefixes = uniquePrefixes.filter(prefix => prefix !== "??" && !observerNodesByPrefix.has(prefix));
     
     searchablePrefixes.forEach((prefix, index) => {
       const searchResult = searchResults[index];
@@ -110,7 +130,7 @@ export default function PathVisualization({
     });
     
     return mapping;
-  }, [searchResults, uniquePrefixes]);
+  }, [observerNodesByPrefix, searchResults, uniquePrefixes]);
 
   // Fixed node spacing optimized for ~3 lines of text
   const fixedNodeSize = useMemo(() => ({ x: 140, y: 100 }), []);
@@ -129,40 +149,64 @@ export default function PathVisualization({
 
   const PathsList = useCallback(() => (
     <div className="mt-1 p-2 bg-gray-100 dark:bg-neutral-700 rounded text-xs break-all text-gray-800 dark:text-gray-200">
-      {pathGroups.map((group, groupIndex) => (
-        <div key={groupIndex} className="mb-2 last:mb-0">
-          <div className="flex flex-wrap gap-1 ml-2 items-center">
-            {group.pathSlices.map((slice, sliceIndex) => (
-              <NodeLinkWithHover key={sliceIndex} nodeName={slice} exact={false} is_repeater={true}>
-                <span className="text-gray-800 dark:text-gray-200 text-xs">
-                  {slice}
+      {pathGroups.map((group, groupIndex) => {
+        const observers = Array.from(new Map(
+          group.indices.map((pathIndex) => {
+            const pathItem = paths[pathIndex];
+            return [
+              pathItem.pubkey,
+              {
+                name: pathItem.origin?.trim() || pathItem.pubkey,
+                publicKey: pathItem.pubkey,
+                prefix: pathItem.pubkey.substring(0, 2),
+              },
+            ];
+          })
+        ).values());
+
+        return (
+          <div key={groupIndex} className="mb-2 last:mb-0">
+            <div className="flex flex-wrap gap-1 ml-2 items-center">
+              {group.pathSlices.slice(0, -1).map((slice, sliceIndex) => (
+                <NodeLinkWithHover key={`repeater-${sliceIndex}-${slice}`} nodeName={slice} exact={false} is_repeater={true}>
+                  <span className="text-gray-800 dark:text-gray-200 text-xs">
+                    {slice}
+                  </span>
+                </NodeLinkWithHover>
+              ))}
+
+              {observers.map((observer, observerIndex) => (
+                <Link
+                  key={`observer-${observer.publicKey}`}
+                  href={`/meshcore/node/${observer.publicKey}`}
+                  title={`${observer.name} (${observer.publicKey})`}
+                  className="text-xs font-medium text-emerald-700 underline-offset-2 hover:underline dark:text-emerald-300"
+                >
+                  {observer.prefix}
+                  {observerIndex < observers.length - 1 ? "," : ""}
+                </Link>
+              ))}
+              {group.count > 1 && (
+                <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">
+                  (x{group.count})
+                  {/* TODO: this doesnt work? */}
                 </span>
-              </NodeLinkWithHover>
-            ))}
-            {group.count > 1 && (
-              <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">
-                (x{group.count})
-                {/* TODO: this doesnt work? */}
-              </span>
-            )}
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
-  ), [pathGroups]);
+  ), [pathGroups, paths]);
 
   // Memoize the render function to prevent unnecessary re-renders
   const renderCustomNodeElement = useCallback(({ nodeDatum, toggleNode }: any) => {
     const rootName = initiatingNodeKey ? initiatingNodeKey.substring(0, 2) : "??";
     const isRoot = nodeDatum.name === rootName;
-    // Check if this node represents an origin pubkey (final 2-char hex from pubkey)
-    const isOriginPubkey = paths.some(({ pubkey }) => {
-      const pubkeyPrefix = pubkey.substring(0, 2);
-      return nodeDatum.name === pubkeyPrefix;
-    });
+    const isObserverNode = observerNodesByPrefix.has(nodeDatum.name);
     
-    // Get node data for this prefix
-    const nodeData = prefixToNodes.get(nodeDatum.name) || [];
+    // Final observer nodes use origin/origin_pubkey data; intermediate hops use repeater search results
+    const nodeData = observerNodesByPrefix.get(nodeDatum.name) || prefixToNodes.get(nodeDatum.name) || [];
     const isResolved = nodeData.length > 0;
 
     
@@ -172,8 +216,8 @@ export default function PathVisualization({
         <circle 
           r={15}
           fill={isRoot ? "#3b82f6" : "#6b7280"}
-          stroke={isOriginPubkey && !isRoot ? "#10b981" : "none"}
-          strokeWidth={isOriginPubkey && !isRoot ? 2 : 0}
+          stroke={isObserverNode && !isRoot ? "#10b981" : "none"}
+          strokeWidth={isObserverNode && !isRoot ? 2 : 0}
         />
         
         {/* Hex prefix inside circle */}
@@ -208,7 +252,7 @@ export default function PathVisualization({
         })}
       </g>
     );
-  }, [initiatingNodeKey, paths, prefixToNodes]);
+  }, [initiatingNodeKey, observerNodesByPrefix, prefixToNodes]);
 
   const GraphView = useCallback(() => {
     if (!showGraph || pathsCount === 0 || !treeData) return null;
