@@ -176,15 +176,11 @@ export default function PathVisualization({
               ))}
 
               {observers.map((observer, observerIndex) => (
-                <Link
-                  key={`observer-${observer.publicKey}`}
-                  href={`/meshcore/node/${observer.publicKey}`}
-                  title={`${observer.name} (${observer.publicKey})`}
-                  className="text-xs font-medium text-emerald-700 underline-offset-2 hover:underline dark:text-emerald-300"
-                >
-                  {observer.prefix}
-                  {observerIndex < observers.length - 1 ? "," : ""}
-                </Link>
+                <NodeLinkWithHover key={`observer-${observer.publicKey}`} nodeName={observer.prefix} exact={false}>
+                  <span className="text-emerald-700 dark:text-emerald-300 text-xs font-medium" title={`${observer.name} (${observer.publicKey})`}>
+                    {observer.prefix}{observerIndex < observers.length - 1 ? "," : ""}
+                  </span>
+                </NodeLinkWithHover>
               ))}
               {group.count > 1 && (
                 <span className="text-gray-500 dark:text-gray-400 text-xs ml-1">
