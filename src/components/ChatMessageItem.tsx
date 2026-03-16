@@ -224,6 +224,7 @@ function ChatMessageItem({ msg, showErrorRow, variant = "default" }: ChatMessage
                 title={t("chatMessage.heardRepeats", { count: pathData.length })}
                 className="text-xs"
                 packetHash={msg.message_id}
+                channelHash={msg.channel_hash}
               />
             </div>
           </div>
@@ -260,6 +261,7 @@ function ChatMessageItem({ msg, showErrorRow, variant = "default" }: ChatMessage
                   title={t("chatMessage.heardRepeats", { count: pathData.length })}
                   className="text-xs"
                   packetHash={msg.message_id}
+                  channelHash={msg.channel_hash}
                 />
               </div>
             </div>
@@ -296,6 +298,7 @@ function ChatMessageItem({ msg, showErrorRow, variant = "default" }: ChatMessage
                 title={t("chatMessage.heardRepeats", { count: pathData.length })}
                 className="text-xs"
                 packetHash={msg.message_id}
+                channelHash={msg.channel_hash}
               />
             </div>
           </div>

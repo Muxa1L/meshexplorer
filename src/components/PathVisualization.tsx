@@ -27,6 +27,7 @@ interface PathVisualizationProps {
   showDropdown?: boolean;
   initiatingNodeKey?: string;
   packetHash?: string;
+  channelHash?: string;
 }
 
 
@@ -36,7 +37,8 @@ export default function PathVisualization({
   className = "",
   showDropdown = true,
   initiatingNodeKey,
-  packetHash
+  packetHash,
+  channelHash,
 }: PathVisualizationProps) {
   const { t } = useLocale();
   const [expanded, setExpanded] = useState(false);
@@ -287,6 +289,12 @@ export default function PathVisualization({
               <span>{showGraph ? t("path.hideGraph") : t("path.showGraph")}</span>
             </button>
           )}
+
+          {channelHash && (
+            <span>
+              {t("stats.channelHash")}: {channelHash}
+            </span>
+          )}
           
           {packetHash && (
             <a
@@ -331,6 +339,12 @@ export default function PathVisualization({
           >
             <span>{showGraph ? t("path.hideGraph") : t("path.showGraph")}</span>
           </button>
+        )}
+
+        {channelHash && (
+          <span>
+            {t("stats.channelHash")}: {channelHash}
+          </span>
         )}
         
         {packetHash && (
