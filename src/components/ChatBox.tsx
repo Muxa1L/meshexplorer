@@ -32,6 +32,9 @@ interface ChatBoxQuery {
 
 type MessageOrder = "oldest" | "newest";
 
+const EXPANDED_PRELOAD_DISTANCE_PX = 520;
+const COLLAPSED_PRELOAD_ROOT_MARGIN = "520px";
+
 function getChannelDisplayLabel(tab: TabItem) {
   return tab.channelName || getChannelIdFromKey(tab.privateKey).toUpperCase();
 }
@@ -146,7 +149,7 @@ export default function ChatBox({
     },
     {
       threshold: 0.1,
-      rootMargin: '100px',
+      rootMargin: COLLAPSED_PRELOAD_ROOT_MARGIN,
       enabled: hasMore && !isLoadingMore && !loading
     }
   );
@@ -174,10 +177,11 @@ export default function ChatBox({
       ? container.scrollHeight - container.scrollTop - container.clientHeight
       : container.scrollTop;
     const isNearLatest = distanceFromLatest <= 160;
+    const hasScrollableMessages = container.scrollHeight - container.clientHeight > 24;
 
     isNearLatestRef.current = isNearLatest;
-    setShowJumpToLatest(!isNearLatest && orderedMessages.length > 0);
-  }, [messageOrder, orderedMessages.length]);
+    setShowJumpToLatest(!isNearLatest && hasScrollableMessages);
+  }, [messageOrder]);
 
   const scrollToLatestMessage = useCallback((behavior: ScrollBehavior = "smooth") => {
     const container = expandedScrollRef.current;
@@ -200,8 +204,8 @@ export default function ChatBox({
     updateExpandedScrollState();
 
     const shouldLoadMore = messageOrder === "oldest"
-      ? container.scrollTop <= 180
-      : container.scrollHeight - container.scrollTop - container.clientHeight <= 180;
+      ? container.scrollTop <= EXPANDED_PRELOAD_DISTANCE_PX
+      : container.scrollHeight - container.scrollTop - container.clientHeight <= EXPANDED_PRELOAD_DISTANCE_PX;
 
     if (shouldLoadMore && hasMore && !isLoadingMore && !loading) {
       previousExpandedScrollHeightRef.current = messageOrder === "oldest" ? container.scrollHeight : null;
