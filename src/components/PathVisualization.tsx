@@ -296,7 +296,7 @@ export default function PathVisualization({
             </span>
           )}
           
-          {packetHash && (
+          {/* {packetHash && (
             <a
               href={`https://analyzer.letsme.sh/packets?packet_hash=${packetHash}`}
               target="_blank"
@@ -306,7 +306,7 @@ export default function PathVisualization({
               <span>{t("path.analyze")}</span>
               <ExternalLink className="w-3 h-3" />
             </a>
-          )}
+          )} */}
         </div>
         <PathsList />
         {showGraph && <GraphView />}
@@ -347,7 +347,7 @@ export default function PathVisualization({
           </span>
         )}
         
-        {packetHash && (
+        {/* {packetHash && (
           <a
             href={`https://analyzer.letsme.sh/packets?packet_hash=${packetHash}`}
             target="_blank"
@@ -357,7 +357,7 @@ export default function PathVisualization({
             <span>{t("path.analyze")}</span>
             <ExternalLink className="w-3 h-3" />
           </a>
-        )}
+        )} */}
       </div>
       
       {expanded && pathsCount > 0 && (
