@@ -91,10 +91,10 @@ export const enMessages = {
       "Send a test message (to yourself, to a room, or to a local chat)",
     ],
     coverageTitle: "Filling the MeshCore coverage map",
-    coverageText: "If you want to help collect coverage data for your regional MeshCore network and upload it to MeshCoreTel, use the Android wardriving app and follow the steps below.",
+    coverageText: "If you want to help collect coverage data network and upload it, use the Android wardriving app and follow the steps below.",
     coverageSteps: [
       "Install the Meshcore Wardrive Android app.",
-      "Configure upload to MeshCoreTel: Settings > Configure API (Upload URL).",
+      "Configure upload: Settings > Configure API (Upload URL).",
       "Connect your mobile MeshCore node over Bluetooth.",
       "Press the green Play button to enable automatic pings to nearby repeaters, or send pings manually.",
       "When finished, upload the collected data: Settings > Upload Data.",
