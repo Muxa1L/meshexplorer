@@ -23,6 +23,8 @@ interface PopupContentProps {
 
 // Individual node marker component
 export function NodeMarker({ node, showNodeNames = true, isSelected = false, isLoadingNeighbors = false }: NodeMarkerProps) {
+  const markerLabel = node.display_prefix || node.node_id.substring(0, 2).toUpperCase();
+
   const getMarkerClass = () => {
     let baseClass = "custom-node-marker";
     
@@ -48,7 +50,7 @@ export function NodeMarker({ node, showNodeNames = true, isSelected = false, isL
         </div>
       )}
       <div className={getMarkerClass()}>
-        <span>{node.node_id.substring(0,2)}</span>
+        <span>{markerLabel}</span>
       </div>
     </div>
   );

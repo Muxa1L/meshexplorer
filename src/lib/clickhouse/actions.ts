@@ -2,6 +2,7 @@
 import { clickhouse } from "./clickhouse";
 import { generateRegionWhereClauseFromArray, generateRegionWhereClause, detectRegionFromBrokerTopic, detectRegion } from "@/lib/regionFilters";
 import { getRegionConfig } from "@/lib/regions";
+import { getPathHashSizeBytes, getPubkeyPrefix } from "@/lib/pathUtils";
 
 export interface WardriveSample{
   lat: number  | null;
@@ -332,8 +333,7 @@ export async function getNodePositions({ minLat, maxLat, minLng, maxLng, nodeTyp
     
     const query = `SELECT node_id, name, short_name, latitude, longitude, last_seen, first_seen, type, broker, topic FROM unified_latest_nodeinfo WHERE ${where.join(" AND ")}`;
     const resultSet = await clickhouse.query({ query, query_params: params, format: 'JSONEachRow' });
-    const rows = await resultSet.json();
-    return rows as Array<{
+    const rows = await resultSet.json() as Array<{
       node_id: string;
       name?: string | null;
       short_name?: string | null;
@@ -342,7 +342,46 @@ export async function getNodePositions({ minLat, maxLat, minLng, maxLng, nodeTyp
       last_seen: string;
       first_seen?: string;
       type: string;
+      broker?: string;
+      topic?: string;
+      display_prefix?: string;
     }>;
+
+    if (rows.length === 0) {
+      return rows;
+    }
+
+    const nodeIds = rows.map((row) => row.node_id);
+    const advertPathsQuery = `
+      SELECT
+        public_key,
+        upper(hex(argMax(path, ingest_timestamp))) AS latest_path,
+        argMax(path_len, ingest_timestamp) AS latest_path_len
+      FROM meshcore_adverts
+      WHERE public_key IN {nodeIds:Array(String)}
+      GROUP BY public_key
+    `;
+    const advertPathsResult = await clickhouse.query({
+      query: advertPathsQuery,
+      query_params: { nodeIds },
+      format: 'JSONEachRow'
+    });
+    const advertPaths = await advertPathsResult.json() as Array<{
+      public_key: string;
+      latest_path: string;
+      latest_path_len: number;
+    }>;
+
+    const prefixByNodeId = new Map<string, string>();
+    advertPaths.forEach((row) => {
+      const hashSizeBytes = getPathHashSizeBytes(row.latest_path, row.latest_path_len);
+      prefixByNodeId.set(row.public_key, getPubkeyPrefix(row.public_key, hashSizeBytes));
+    });
+
+    return rows.map((row) => ({
+      ...row,
+      display_prefix: prefixByNodeId.get(row.node_id) ?? row.node_id.substring(0, 2).toUpperCase(),
+    }));
   } catch (error) {
     console.error('ClickHouse error in getNodePositions:', error);
     throw error;

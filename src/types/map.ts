@@ -1,5 +1,6 @@
 export type NodePosition = {
   node_id: string;
+  display_prefix?: string;
   latitude: number;
   longitude: number;
   altitude?: number;
