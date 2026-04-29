@@ -24,6 +24,17 @@ interface PopupContentProps {
 // Individual node marker component
 export function NodeMarker({ node, showNodeNames = true, isSelected = false, isLoadingNeighbors = false }: NodeMarkerProps) {
   const markerLabel = node.display_prefix || node.node_id.substring(0, 2).toUpperCase();
+  const markerWidth = Math.max(22, markerLabel.length * 8 + 10);
+  const markerHeight = 22;
+  const markerStyle = {
+    minWidth: `${markerWidth}px`,
+    height: `${markerHeight}px`,
+    paddingInline: markerLabel.length > 2 ? "6px" : "0px",
+    borderRadius: `${Math.round(markerHeight * 0.45)}px`,
+  } as React.CSSProperties;
+  const containerStyle = {
+    ["--marker-width" as string]: `${markerWidth}px`,
+  } as React.CSSProperties;
 
   const getMarkerClass = () => {
     let baseClass = "custom-node-marker";
@@ -43,13 +54,13 @@ export function NodeMarker({ node, showNodeNames = true, isSelected = false, isL
   };
 
   return (
-    <div className="custom-node-marker-container">
+    <div className="custom-node-marker-container" style={containerStyle}>
       {showNodeNames && node.short_name && (
         <div className="custom-node-label">
           {node.type === "meshcore" ? getNameIconLabel(node.name || node.short_name) : node.short_name}
         </div>
       )}
-      <div className={getMarkerClass()}>
+      <div className={getMarkerClass()} style={markerStyle}>
         <span>{markerLabel}</span>
       </div>
     </div>

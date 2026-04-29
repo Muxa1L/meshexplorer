@@ -141,19 +141,22 @@ html {
 }
 
 .custom-node-marker {
-  width: 18px;
-  height: 18px;
+  min-width: 22px;
+  height: 22px;
   background: #2563eb; /* blue-600 */
-  border-radius: 50%;
+  border-radius: 10px;
   box-shadow: 0 0 4px rgba(0,0,0,0.2);
   z-index: 2;
   justify-content: center;
-  font: 700 9px system-ui, sans-serif;
+  font: 700 10px system-ui, sans-serif;
   display: flex;
   align-items: center;
+  padding-inline: 4px;
   position: relative;
   box-shadow: 0 0 4px #0003;
   color: #ffffff;
+  letter-spacing: 0.02em;
+  line-height: 1;
 }
 
 .custom-node-marker--green {
@@ -181,7 +184,7 @@ html {
   bottom: -3px;
   border: 2px solid transparent;
   border-top: 2px solid #2563eb; /* blue-600 */
-  border-radius: 50%;
+  border-radius: 12px;
   animation: node-spinner 1s linear infinite;
 }
 
@@ -210,7 +213,7 @@ html {
 .custom-node-label {
   position: absolute;
   top: 0;
-  left: 20px;
+  left: calc(var(--marker-width, 22px) + 6px);
   /* transform: translateX(-50%); */
   font-size: 11px;
   color: #222;
