@@ -42,7 +42,14 @@ export function NodeMarker({ node, showNodeNames = true, isSelected = false, isL
     if (node.type === "meshtastic") {
       baseClass += " custom-node-marker--green";
     } else if (node.type === "meshcore") {
-      baseClass += " custom-node-marker--blue custom-node-marker--top";
+      if (node.is_room_server) {
+        baseClass += " custom-node-marker--red";
+      } else if (node.is_chat_node) {
+        baseClass += " custom-node-marker--green";
+      } else {
+        baseClass += " custom-node-marker--blue";
+      }
+      baseClass += " custom-node-marker--top";
     }
     
     // Only add loading class when actually loading neighbors

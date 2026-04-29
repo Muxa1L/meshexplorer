@@ -166,6 +166,10 @@ html {
   background: #2563eb; /* blue-600 */
 }
 
+.custom-node-marker--red {
+  background: #dc2626; /* red-600 */
+}
+
 .custom-node-marker--top {
   z-index: 1002 !important;
   position: relative;

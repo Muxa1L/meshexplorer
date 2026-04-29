@@ -356,7 +356,10 @@ export async function getNodePositions({ minLat, maxLat, minLng, maxLng, nodeTyp
       SELECT
         public_key,
         upper(hex(argMax(path, ingest_timestamp))) AS latest_path,
-        argMax(path_len, ingest_timestamp) AS latest_path_len
+        argMax(path_len, ingest_timestamp) AS latest_path_len,
+        argMax(is_repeater, ingest_timestamp) AS is_repeater,
+        argMax(is_chat_node, ingest_timestamp) AS is_chat_node,
+        argMax(is_room_server, ingest_timestamp) AS is_room_server
       FROM meshcore_adverts
       WHERE public_key IN {nodeIds:Array(String)}
       GROUP BY public_key
@@ -370,17 +373,33 @@ export async function getNodePositions({ minLat, maxLat, minLng, maxLng, nodeTyp
       public_key: string;
       latest_path: string;
       latest_path_len: number;
+      is_repeater: number;
+      is_chat_node: number;
+      is_room_server: number;
     }>;
 
-    const prefixByNodeId = new Map<string, string>();
+    const nodeDetailsByNodeId = new Map<string, {
+      displayPrefix: string;
+      isRepeater: boolean;
+      isChatNode: boolean;
+      isRoomServer: boolean;
+    }>();
     advertPaths.forEach((row) => {
       const hashSizeBytes = getPathHashSizeBytes(row.latest_path, row.latest_path_len);
-      prefixByNodeId.set(row.public_key, getPubkeyPrefix(row.public_key, hashSizeBytes));
+      nodeDetailsByNodeId.set(row.public_key, {
+        displayPrefix: getPubkeyPrefix(row.public_key, hashSizeBytes),
+        isRepeater: row.is_repeater === 1,
+        isChatNode: row.is_chat_node === 1,
+        isRoomServer: row.is_room_server === 1,
+      });
     });
 
     return rows.map((row) => ({
       ...row,
-      display_prefix: prefixByNodeId.get(row.node_id) ?? row.node_id.substring(0, 2).toUpperCase(),
+      display_prefix: nodeDetailsByNodeId.get(row.node_id)?.displayPrefix ?? row.node_id.substring(0, 2).toUpperCase(),
+      is_repeater: nodeDetailsByNodeId.get(row.node_id)?.isRepeater ?? false,
+      is_chat_node: nodeDetailsByNodeId.get(row.node_id)?.isChatNode ?? false,
+      is_room_server: nodeDetailsByNodeId.get(row.node_id)?.isRoomServer ?? false,
     }));
   } catch (error) {
     console.error('ClickHouse error in getNodePositions:', error);
