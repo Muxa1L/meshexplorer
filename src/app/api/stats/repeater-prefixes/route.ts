@@ -51,6 +51,13 @@ export async function GET(req: Request) {
         hash_size_bytes: hashSizeBytes,
         last_seen: repeater.last_seen,
       };
+    }).sort((left, right) => {
+      const leftFirstByte = left.prefix.substring(0, 2);
+      const rightFirstByte = right.prefix.substring(0, 2);
+
+      return leftFirstByte.localeCompare(rightFirstByte)
+        || left.prefix.localeCompare(right.prefix)
+        || left.node_name.localeCompare(right.node_name);
     });
 
     return NextResponse.json({ data: rows });
