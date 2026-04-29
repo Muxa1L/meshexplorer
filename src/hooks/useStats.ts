@@ -29,15 +29,15 @@ interface PopularChannelsResponse {
 }
 
 interface RepeaterPrefixRow {
+  public_key: string;
+  node_name: string;
   prefix: string;
   hash_size_bytes: number;
-  node_count: number;
-  node_names: string[];
+  last_seen: string;
 }
 
 interface RepeaterPrefixesResponse {
   data: RepeaterPrefixRow[];
-  byHashSize?: Record<string, RepeaterPrefixRow[]>;
 }
 
 interface PacketCountByTypeRow {
@@ -142,8 +142,7 @@ export function useUnusedPrefixes(region?: string) {
   const { data: repeaterPrefixesData, isLoading, error } = useRepeaterPrefixes(region);
   
   const unusedPrefixes = React.useMemo(() => {
-    const oneBytePrefixes = repeaterPrefixesData?.byHashSize?.["1"] ?? repeaterPrefixesData?.data;
-    if (!oneBytePrefixes) return [];
+    if (!repeaterPrefixesData?.data) return [];
     
     // Generate all possible 2-character hex prefixes (01-FE, excluding 00 and FF)
     const allPrefixes = [];
@@ -154,10 +153,10 @@ export function useUnusedPrefixes(region?: string) {
     }
     
     // Get used prefixes from the API response
-    const usedPrefixes = new Set(oneBytePrefixes.map(row => row.prefix));
+    const usedPrefixes = new Set(repeaterPrefixesData.data.map(row => row.public_key.substring(0, 2).toUpperCase()));
     // Find unused prefixes
     return allPrefixes.filter(prefix => !usedPrefixes.has(prefix));
-  }, [repeaterPrefixesData?.byHashSize, repeaterPrefixesData?.data]);
+  }, [repeaterPrefixesData?.data]);
   
   return {
     data: unusedPrefixes,

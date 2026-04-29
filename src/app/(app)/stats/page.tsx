@@ -54,7 +54,6 @@ export default function StatsPage() {
   const nodesOverTime = nodesOverTimeQuery.data?.data ?? [];
   const popularChannels = popularChannelsQuery.data?.data ?? [];
   const repeaterPrefixes = repeaterPrefixesQuery.data?.data ?? [];
-  const repeaterPrefixesByHashSize = repeaterPrefixesQuery.data?.byHashSize ?? { "1": repeaterPrefixes };
   const unusedPrefixes = unusedPrefixesQuery.data ?? [];
 
   // Get the friendly name for the selected region
@@ -193,47 +192,26 @@ export default function StatsPage() {
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
               {t("stats.usedPrefixesDescription")}
             </p>
-            <div className="space-y-4">
-              {Object.entries(repeaterPrefixesByHashSize)
-                .sort(([left], [right]) => Number(left) - Number(right))
-                .map(([hashSizeBytes, rows]) => (
-                  <div key={hashSizeBytes}>
-                    <div className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                      {hashSizeBytes}-byte path hashes
-                    </div>
-                    <table className="w-full text-sm border">
-                      <thead>
-                        <tr>
-                          <th className="border px-2 py-1">{t("stats.prefix")}</th>
-                          <th className="border px-2 py-1">Nodes</th>
-                          <th className="border px-2 py-1">{t("stats.nodeNames")}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {rows.map((row, i) => (
-                          <tr key={`${hashSizeBytes}-${row.prefix}-${i}`}>
-                            <td className="border px-2 py-1 font-mono">{row.prefix}</td>
-                            <td className="border px-2 py-1 text-center">{row.node_count}</td>
-                            <td className="border px-2 py-1">
-                              {row.node_names && row.node_names.length > 0 ? (
-                                <div className="space-y-1">
-                                  {row.node_names.map((name: string, j: number) => (
-                                    <div key={j} className="text-xs">
-                                      {name || t("stats.unnamedNode")}
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <span className="text-gray-500">{t("stats.noNamedNodes")}</span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+            <table className="w-full text-sm border">
+              <thead>
+                <tr>
+                  <th className="border px-2 py-1">{t("stats.prefix")}</th>
+                  <th className="border px-2 py-1">{t("stats.hashSize")}</th>
+                  <th className="border px-2 py-1">{t("stats.nodeNames")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {repeaterPrefixes.map((row, i) => (
+                  <tr key={`${row.public_key}-${i}`}>
+                    <td className="border px-2 py-1 font-mono">{row.prefix}</td>
+                    <td className="border px-2 py-1 text-center">{row.hash_size_bytes}</td>
+                    <td className="border px-2 py-1 text-xs">
+                      {row.node_name || t("stats.unnamedNode")}
+                    </td>
+                  </tr>
                 ))}
-            </div>
+              </tbody>
+            </table>
           </div>
 
           <div className="mb-6">
