@@ -2,6 +2,7 @@ export interface PathData {
   origin: string;
   pubkey: string;
   path: string;
+  pathLen?: number;
 }
 
 export interface PathGroup {
@@ -16,16 +17,71 @@ export interface TreeNode {
   children?: TreeNode[];
 }
 
+export const SUPPORTED_PATH_HASH_SIZES = [1, 2, 3] as const;
+
+function normalizePathHex(pathHex: string): string {
+  return (pathHex || "").trim().toUpperCase();
+}
+
+export function getPathHashSizeBytes(pathHex: string, pathLen?: number): number {
+  const normalizedPath = normalizePathHex(pathHex);
+
+  if (!normalizedPath || !pathLen || pathLen <= 0) {
+    return 1;
+  }
+
+  const hexCharsPerHop = normalizedPath.length / pathLen;
+  if (!Number.isInteger(hexCharsPerHop) || hexCharsPerHop <= 0 || hexCharsPerHop % 2 !== 0) {
+    return 1;
+  }
+
+  const hashSizeBytes = hexCharsPerHop / 2;
+  if (hashSizeBytes < 1 || hashSizeBytes > 3) {
+    return 1;
+  }
+
+  return hashSizeBytes;
+}
+
+export function splitPathHex(pathHex: string, pathLen?: number): string[] {
+  const normalizedPath = normalizePathHex(pathHex);
+  if (!normalizedPath) {
+    return [];
+  }
+
+  const hashSizeBytes = getPathHashSizeBytes(normalizedPath, pathLen);
+  const sliceLength = hashSizeBytes * 2;
+  const slices: string[] = [];
+
+  for (let index = 0; index < normalizedPath.length; index += sliceLength) {
+    const slice = normalizedPath.slice(index, index + sliceLength);
+    if (slice.length === sliceLength) {
+      slices.push(slice);
+    }
+  }
+
+  return slices;
+}
+
+export function getPubkeyPrefix(pubkey: string, hashSizeBytes?: number): string {
+  const safeHashSizeBytes = hashSizeBytes && hashSizeBytes > 0 ? hashSizeBytes : 1;
+  return (pubkey || "").substring(0, safeHashSizeBytes * 2).toUpperCase();
+}
+
+export function getSupportedPubkeyPrefixes(pubkey: string): string[] {
+  return SUPPORTED_PATH_HASH_SIZES.map((hashSizeBytes) => getPubkeyPrefix(pubkey, hashSizeBytes));
+}
+
 /**
  * Groups paths by their structure similarity
  */
 export function groupPathsByStructure(paths: PathData[]): PathGroup[] {
   const pathGroups: PathGroup[] = [];
   
-  paths.forEach(({ origin, pubkey, path }, index) => {
-    // Parse path into 2-character slices and include observer pubkey as the final hop
-    const pathSlices = path.match(/.{1,2}/g) || [];
-    const pubkeyPrefix = pubkey.substring(0, 2);
+  paths.forEach(({ pubkey, path, pathLen }, index) => {
+    const pathSlices = splitPathHex(path, pathLen);
+    const hashSizeBytes = getPathHashSizeBytes(path, pathLen);
+    const pubkeyPrefix = getPubkeyPrefix(pubkey, hashSizeBytes);
     const fullPathSlices = [...pathSlices, pubkeyPrefix];
     
     // Find existing group with same path structure
@@ -54,7 +110,8 @@ export function groupPathsByStructure(paths: PathData[]): PathGroup[] {
  * Builds a tree structure from path groups for visualization
  */
 export function buildTreeFromPathGroups(pathGroups: PathGroup[], initiatingNodeKey?: string): TreeNode {
-  const rootName = initiatingNodeKey ? initiatingNodeKey.substring(0, 2) : "??";
+  const rootSliceLength = pathGroups.find(group => group.pathSlices.length > 0)?.pathSlices[0]?.length ?? 2;
+  const rootName = initiatingNodeKey ? initiatingNodeKey.substring(0, rootSliceLength).toUpperCase() : "??";
   const root: TreeNode = { name: rootName, children: [] };
   
   pathGroups.forEach(group => {

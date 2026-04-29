@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getWardriveCoverage } from "@/lib/clickhouse/actions";
 import { clickhouse } from "@/lib/clickhouse/clickhouse";
+import { getPubkeyPrefix, getSupportedPubkeyPrefixes } from "@/lib/pathUtils";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -12,7 +13,7 @@ export async function GET(request: Request) {
       clickhouse.query({
         query: `
           SELECT
-            substring(public_key, 1, 2) AS id,
+            public_key,
             node_name                   AS name,
             latitude                    AS lat,
             longitude                   AS lon,
@@ -28,13 +29,24 @@ export async function GET(request: Request) {
       }),
     ]);
 
-    const repeaters = (await repeatersRs.json()) as Array<{
-      id: string;
+    const rawRepeaters = (await repeatersRs.json()) as Array<{
+      public_key: string;
       name: string;
       lat: number;
       lon: number;
       last_seen: string;
     }>;
+
+    const repeaters = rawRepeaters.map((repeater) => ({
+      id: getPubkeyPrefix(repeater.public_key, 3),
+      legacyId: getPubkeyPrefix(repeater.public_key, 1),
+      publicKey: repeater.public_key,
+      prefixes: getSupportedPubkeyPrefixes(repeater.public_key),
+      name: repeater.name,
+      lat: repeater.lat,
+      lon: repeater.lon,
+      last_seen: repeater.last_seen,
+    }));
 
     const coverage = coverageRows.map((r) => ({
       hash: r.hash,

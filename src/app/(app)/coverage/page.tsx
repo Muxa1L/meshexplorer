@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { geohashDecodeBbox } from "@/lib/wardrive/geohash";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -14,6 +14,9 @@ interface CoverageTile {
 
 interface Repeater {
   id: string;
+  legacyId: string;
+  publicKey: string;
+  prefixes: string[];
   name: string;
   lat: number;
   lon: number;
@@ -73,11 +76,19 @@ export default function CoveragePage() {
   const hoverLayerRef = useRef<any>(null);
   const coverageDataRef = useRef<CoverageTile[]>([]);
   const repeaterDataRef = useRef<Repeater[]>([]);
-  const repeaterPosRef = useRef<Map<string, [number, number]>>(new Map());
+  const repeaterPosRef = useRef<Map<string, Array<[number, number]>>>(new Map());
   const repeaterToTilesRef = useRef<Map<string, CoverageTile[]>>(new Map());
 
+  const getRepeaterLabels = useCallback((ids: string[]) => {
+    return ids.flatMap((id) => {
+      return repeaterDataRef.current
+        .filter((repeater) => repeater.legacyId === id)
+        .map((repeater) => repeater.id);
+    });
+  }, []);
+
   // ─── Layer render helpers ────────────────────────────────────────────────
-  function renderCoverage(tiles: CoverageTile[], show: boolean) {
+  const renderCoverage = useCallback((tiles: CoverageTile[], show: boolean) => {
     const L = leafletRef.current;
     if (!L || !coverageLayerRef.current) return;
     coverageLayerRef.current.clearLayers();
@@ -89,6 +100,7 @@ export default function CoveragePage() {
       const ids: string[] = Array.isArray(tile.repeaters)
         ? (tile.repeaters as unknown as string[])
         : Object.keys(tile.repeaters ?? {});
+      const repeaterLabels = getRepeaterLabels(ids);
       const color = tileColor(tile.received, tile.lost);
       const rect = L.rectangle([[minLat, minLon], [maxLat, maxLon]], {
         color,
@@ -102,7 +114,7 @@ export default function CoveragePage() {
         `<b>${tile.hash}</b><br>` +
         `Received: ${tile.received}/${total} (${pct}%)<br>` +
         `Lost: ${tile.lost} &nbsp; Samples: ${tile.samples}<br>` +
-        `Repeaters: ${ids.join(", ") || "—"}<br>` +
+        `Repeaters: ${repeaterLabels.join(", ") || ids.join(", ") || "—"}<br>` +
         `Updated: ${parseDate(tile.lastUpdate).toLocaleString()}`
       );
       rect.on("mouseover", () => {
@@ -113,22 +125,23 @@ export default function CoveragePage() {
           color: "#f59e0b", weight: 3, fill: false, interactive: false,
         }).addTo(hl);
         ids.forEach((id) => {
-          const pos = repeaterPosRef.current.get(id);
-          if (!pos) return;
-          L.polyline([[pos[0], pos[1]], [tileLat, tileLon]], {
-            color: "#3b82f6", weight: 2, opacity: 0.9, interactive: false,
-          }).addTo(hl);
-          L.circleMarker(pos, {
-            radius: 12, color: "#f59e0b", weight: 3, fillColor: "#f59e0b", fillOpacity: 0.3, interactive: false,
-          }).addTo(hl);
+          const positions = repeaterPosRef.current.get(id) ?? [];
+          positions.forEach((pos) => {
+            L.polyline([[pos[0], pos[1]], [tileLat, tileLon]], {
+              color: "#3b82f6", weight: 2, opacity: 0.9, interactive: false,
+            }).addTo(hl);
+            L.circleMarker(pos, {
+              radius: 12, color: "#f59e0b", weight: 3, fillColor: "#f59e0b", fillOpacity: 0.3, interactive: false,
+            }).addTo(hl);
+          });
         });
       });
       rect.on("mouseout", () => hoverLayerRef.current?.clearLayers());
       coverageLayerRef.current.addLayer(rect);
     });
-  }
+  }, [getRepeaterLabels]);
 
-  function renderRepeaters(rptrs: Repeater[], show: boolean) {
+  const renderRepeaters = useCallback((rptrs: Repeater[], show: boolean) => {
     const L = leafletRef.current;
     if (!L || !repeaterLayerRef.current) return;
     repeaterLayerRef.current.clearLayers();
@@ -149,6 +162,7 @@ export default function CoveragePage() {
       marker.bindPopup(
         `<b>${rptr.name || rptr.id}</b><br>` +
         `ID: <code>${rptr.id}</code><br>` +
+        `Legacy ID: <code>${rptr.legacyId}</code><br>` +
         `Last seen: ${formatAge(rptr.last_seen)}`
       );
       marker.on("mouseover", () => {
@@ -158,7 +172,7 @@ export default function CoveragePage() {
         L.circleMarker([rptr.lat, rptr.lon], {
           radius: 14, color: "#f59e0b", weight: 3, fillColor: "#f59e0b", fillOpacity: 0.3, interactive: false,
         }).addTo(hl);
-        (repeaterToTilesRef.current.get(rptr.id) ?? []).forEach((tile) => {
+        (repeaterToTilesRef.current.get(rptr.legacyId) ?? []).forEach((tile) => {
           const [minLat, minLon, maxLat, maxLon] = geohashDecodeBbox(tile.hash);
           const tileLat = (minLat + maxLat) / 2;
           const tileLon = (minLon + maxLon) / 2;
@@ -173,7 +187,7 @@ export default function CoveragePage() {
       marker.on("mouseout", () => hoverLayerRef.current?.clearLayers());
       repeaterLayerRef.current.addLayer(marker);
     });
-  }
+  }, []);
 
   // ─── Load data ───────────────────────────────────────────────────────────
   async function loadData() {
@@ -188,8 +202,13 @@ export default function CoveragePage() {
       coverageDataRef.current = coverage;
       repeaterDataRef.current = repeaters;
       // Build hover lookup maps
-      const posMap = new Map<string, [number, number]>();
-      repeaters.forEach((r) => { if (r.lat && r.lon) posMap.set(r.id, [r.lat, r.lon]); });
+      const posMap = new Map<string, Array<[number, number]>>();
+      repeaters.forEach((r) => {
+        if (!r.lat || !r.lon) return;
+        const existing = posMap.get(r.legacyId) ?? [];
+        existing.push([r.lat, r.lon]);
+        posMap.set(r.legacyId, existing);
+      });
       repeaterPosRef.current = posMap;
       const tileMap = new Map<string, CoverageTile[]>();
       coverage.forEach((tile) => {
@@ -269,13 +288,11 @@ export default function CoveragePage() {
   // ─── Toggle effects (re-render cached data when layer visibility changes) ─
   useEffect(() => {
     renderCoverage(coverageDataRef.current, showCoverage);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showCoverage]);
+  }, [renderCoverage, showCoverage]);
 
   useEffect(() => {
     renderRepeaters(repeaterDataRef.current, showRepeaters);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showRepeaters]);
+  }, [renderRepeaters, showRepeaters]);
 
   // ─── Reload when precision changes (skip on first mount) ─────────────────
   const isFirstRender = useRef(true);

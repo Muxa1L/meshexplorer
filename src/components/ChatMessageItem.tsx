@@ -18,7 +18,7 @@ export interface ChatMessage {
   mac: string;
   encrypted_message: string;
   message_count: number;
-  origin_path_info: Array<[string, string, string, string, string]>; // Array of [origin, origin_pubkey, path, broker, topic] tuples
+  origin_path_info: Array<[string, string, string, number, string, string]>; // Array of [origin, origin_pubkey, path, path_len, broker, topic] tuples
 }
 
 interface ChatMessageItemProps {
@@ -152,10 +152,11 @@ function ChatMessageItem({ msg, showErrorRow, variant = "default" }: ChatMessage
 
   // Convert to PathData format for the new component
   const pathData: PathData[] = useMemo(() => 
-    originPathInfo.map(([origin, origin_pubkey, path, broker, topic]) => ({
+    originPathInfo.map(([origin, origin_pubkey, path, pathLen]) => ({
       origin,
       pubkey: origin_pubkey,
-      path
+      path,
+      pathLen,
     })),
     [originPathInfo]
   );

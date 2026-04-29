@@ -129,9 +129,9 @@ export function generateRegionArrayCondition(regionName: string): string {
   const regionConfig = getRegionConfig(regionName);
   if (!regionConfig) return '';
   
-  const topicConditions = regionConfig.topics.map(topic => `x.5 = '${topic}'`);
+  const topicConditions = regionConfig.topics.map(topic => `x.6 = '${topic}'`);
   const topicClause = topicConditions.length > 1 ? `(${topicConditions.join(' OR ')})` : topicConditions[0];
   
-  return `arrayExists(x -> x.4 = '${regionConfig.broker}' AND ${topicClause}, origin_path_info)`;
+  return `arrayExists(x -> x.5 = '${regionConfig.broker}' AND ${topicClause}, origin_path_info)`;
 }
 

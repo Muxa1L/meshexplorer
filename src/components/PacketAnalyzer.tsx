@@ -18,6 +18,7 @@ import {
   payloadPreview,
   type DecodedPayload,
 } from "@/lib/packet-decode";
+import { splitPathHex } from "@/lib/pathUtils";
 import { useLocale } from "./LocaleProvider";
 
 // ---------------------------------------------------------------------------
@@ -267,7 +268,7 @@ function PacketRow({ packet, isSelected, onClick }: {
     if (!packet.payload) return "";
     try { return payloadPreview(decodePacket(packet.packet)); }
     catch { return packet.packet.slice(0, 24); }
-  }, [packet.payload, packet.payload_type]);
+  }, [packet.packet, packet.payload]);
 
   return (
     <div
@@ -327,10 +328,10 @@ function CopyButton({ text, title }: { text: string; title: string }) {
 // PathChain — routing path visualization
 // ---------------------------------------------------------------------------
 
-function PathChain({ path }: { path: string }) {
+function PathChain({ path, pathLen }: { path: string; pathLen: number }) {
   const { t } = useLocale();
   if (!path) return <span className="text-gray-400 dark:text-gray-500 italic text-xs">{t("packetAnalyzer.noPath")}</span>;
-  const hops = path.match(/.{1,2}/g) ?? [];
+  const hops = splitPathHex(path, pathLen);
   return (
     <div className="flex flex-wrap gap-1.5 items-center mt-2">
       {hops.map((hop, i) => (
@@ -463,7 +464,7 @@ function PacketDetail({ packet, onClose }: { packet: MeshPacket; onClose: () => 
               <span>{t("packetAnalyzer.routingType")}: {ROUTE_TYPES[packet.route_type] ?? `0x${packet.route_type.toString(16)}`}</span>
               <span>{t("packetAnalyzer.hopsLabel")}: {packet.path_len}</span>
             </div>
-            <PathChain path={packet.path} />
+            <PathChain path={packet.path} pathLen={packet.path_len} />
             {packet.path && (
               <div className="mt-3 font-mono text-xs text-gray-500 dark:text-gray-500 break-all bg-gray-100 dark:bg-black/20 p-2 rounded">
                 {packet.path}
@@ -531,7 +532,7 @@ export default function PacketAnalyzer() {
     staleTime: 2000,
   });
 
-  const packets = data?.packets ?? [];
+  const packets = useMemo(() => data?.packets ?? [], [data?.packets]);
 
   const stats = useMemo(() => {
     const counts: Record<number, number> = {};

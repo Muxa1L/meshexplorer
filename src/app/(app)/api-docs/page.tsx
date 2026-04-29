@@ -276,7 +276,7 @@ export default function ApiDocsPage() {
                     <h5 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Recent Adverts Array</h5>
                     <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1 ml-4">
                       <li><code className="bg-gray-200 dark:bg-neutral-700 px-1 rounded">adv_timestamp</code> - Advertisement timestamp</li>
-                      <li><code className="bg-gray-200 dark:bg-neutral-700 px-1 rounded">origin_path_pubkey_tuples</code> - Array of [origin, path, pubkey] tuples</li>
+                      <li><code className="bg-gray-200 dark:bg-neutral-700 px-1 rounded">origin_path_pubkey_tuples</code> - Array of [origin, path, pubkey, path_len] tuples</li>
                       <li><code className="bg-gray-200 dark:bg-neutral-700 px-1 rounded">advert_count</code> - Number of adverts in this group</li>
                       <li><code className="bg-gray-200 dark:bg-neutral-700 px-1 rounded">earliest_timestamp/latest_timestamp</code> - Time range for this advert group</li>
                       <li><code className="bg-gray-200 dark:bg-neutral-700 px-1 rounded">latitude/longitude</code> - Position at time of advert</li>
@@ -333,7 +333,7 @@ export default function ApiDocsPage() {
     {
       "adv_timestamp": "2025-09-07T00:59:18",
       "origin_path_pubkey_tuples": [
-        ["origin_node", "7ffb7e", "origin_pubkey_hex"]
+        ["origin_node", "7ffb7e", "origin_pubkey_hex", 3]
       ],
       "advert_count": 1,
       "earliest_timestamp": "2025-09-07T00:59:18",
@@ -509,7 +509,7 @@ export default function ApiDocsPage() {
                 {/* Repeater Prefixes */}
                 <div className="bg-gray-50 dark:bg-neutral-800 rounded-lg p-6">
                   <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">GET /api/stats/repeater-prefixes</h3>
-                  <p className="text-gray-600 dark:text-gray-300 mb-4">Get repeater node statistics grouped by public key prefix (first 2 characters).</p>
+                  <p className="text-gray-600 dark:text-gray-300 mb-4">Get repeater node statistics grouped by supported MeshCore path prefix sizes (1, 2, and 3 bytes).</p>
                   
                   <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Query Parameters</h4>
                   <div className="overflow-x-auto">
@@ -539,11 +539,17 @@ export default function ApiDocsPage() {
 {`{
   "data": [
     {
-      "prefix": "ab",
+      "prefix": "AB",
+      "hash_size_bytes": 1,
       "node_count": 15,
       "node_names": ["Node1", "Node2", "Node3"]
     }
-  ]
+  ],
+  "byHashSize": {
+    "1": [{ "prefix": "AB", "hash_size_bytes": 1, "node_count": 15, "node_names": ["Node1"] }],
+    "2": [{ "prefix": "AB12", "hash_size_bytes": 2, "node_count": 1, "node_names": ["Node1"] }],
+    "3": [{ "prefix": "AB12CD", "hash_size_bytes": 3, "node_count": 1, "node_names": ["Node1"] }]
+  }
 }`}
                     </pre>
                   </div>

@@ -19,7 +19,7 @@ export interface NodeInfo {
 
 export interface Advert {
   group_id: number;
-  origin_path_pubkey_tuples: Array<[string, string, string]>; // Array of [origin, path, origin_pubkey] tuples
+  origin_path_pubkey_tuples: Array<[string, string, string, number]>; // Array of [origin, path, origin_pubkey, path_len] tuples
   advert_count: number;
   earliest_timestamp: string;
   latest_timestamp: string;

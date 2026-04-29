@@ -384,7 +384,7 @@ export async function getLatestChatMessages({ limit = 20, before, after, channel
       mac: string;
       encrypted_message: string;
       message_count: number;
-      origin_path_info: Array<[string, string, string, string, string]>; // Array of [origin, origin_pubkey, path, broker, topic] tuples
+      origin_path_info: Array<[string, string, string, number, string, string]>; // Array of [origin, origin_pubkey, path, path_len, broker, topic] tuples
       message_id: string;
     }>;
   } catch (error) {
@@ -454,7 +454,7 @@ export async function getMeshcoreNodeInfo(publicKey: string, limit: number = 50)
     const advertsQuery = `
       SELECT 
         argMax(adv_timestamp, ingest_timestamp) as adv_timestamp,
-        groupArray((origin, path, origin_pubkey)) as origin_path_pubkey_tuples,
+        groupArray((origin, path, origin_pubkey, path_len)) as origin_path_pubkey_tuples,
         count() as advert_count,
         min(ingest_timestamp) as earliest_timestamp,
         max(ingest_timestamp) as latest_timestamp,
@@ -655,20 +655,16 @@ export async function getAllNodeNeighbors(lastSeen: string | null = null, minLat
           ${meshcoreWhere}
         GROUP BY public_key
       ),
-      repeater_prefixes AS (
-        -- Get repeater prefixes info, excluding collisions (multiple repeaters per prefix)
-        -- Only include repeaters from the selected region
-        SELECT 
-          substring(public_key, 1, 2) as prefix,
-          count() as node_count,
-          any(public_key) as representative_key,
-          any(node_name) as representative_name
-        FROM meshcore_adverts_latest 
-        WHERE is_repeater = 1 
-          AND last_seen >= now() - INTERVAL 2 DAY
+      repeater_candidates AS (
+        -- Candidate repeaters visible on the map in the selected region.
+        SELECT DISTINCT
+          mal.public_key,
+          mal.node_name
+        FROM meshcore_adverts_latest mal
+        WHERE mal.is_repeater = 1
+          AND mal.last_seen >= now() - INTERVAL 2 DAY
+          AND mal.public_key IN (SELECT node_id FROM visible_nodes)
           ${regionFilter.whereClause ? `AND ${regionFilter.whereClause}` : ''}
-        GROUP BY prefix
-        HAVING node_count = 1  -- Only include prefixes with exactly one repeater
       ),
       direct_connections AS (
         -- Get all direct connections (path_len = 0) but only between visible nodes
@@ -686,9 +682,9 @@ export async function getAllNodeNeighbors(lastSeen: string | null = null, minLat
           ${meshcoreWhere}
       ),
       path_neighbors AS (
-        -- Extract neighbors from routing paths with unique payload counts
-        -- Group by payload first to avoid double counting same message propagation
-        SELECT 
+        -- Extract neighbors from routing paths with unique payload counts.
+        -- Prefix width is derived from path byte length / hop count.
+        SELECT
           source_prefix,
           target_prefix,
           'path' as connection_type,
@@ -696,34 +692,43 @@ export async function getAllNodeNeighbors(lastSeen: string | null = null, minLat
         FROM (
           SELECT DISTINCT
             payload,
-            upper(hex(substring(path, i, 1))) as source_prefix,
-            upper(hex(substring(path, i + 1, 1))) as target_prefix
+            upper(hex(substring(path, ((i - 1) * hash_size_bytes) + 1, hash_size_bytes))) as source_prefix,
+            upper(hex(substring(path, (i * hash_size_bytes) + 1, hash_size_bytes))) as target_prefix
           FROM (
             SELECT DISTINCT
               payload,
               path,
-              path_len
-            FROM meshcore_packets 
+              path_len,
+              intDiv(length(path), path_len) as hash_size_bytes
+            FROM meshcore_packets
             WHERE path_len >= 2
+              AND length(path) > 0
               AND ingest_timestamp >= now() - INTERVAL 1 DAY
               ${packetsRegionWhere}
           ) p
           ARRAY JOIN range(1, path_len) as i
           WHERE i < path_len
+            AND hash_size_bytes BETWEEN 1 AND 3
+            AND hash_size_bytes * path_len = length(path)
         ) path_pairs
-        WHERE source_prefix IN (SELECT prefix FROM repeater_prefixes)
-          AND target_prefix IN (SELECT prefix FROM repeater_prefixes)
-          AND source_prefix != target_prefix
+        WHERE source_prefix != target_prefix
         GROUP BY source_prefix, target_prefix
       ),
       prefix_to_key_map AS (
-        -- Map prefixes back to full public keys for visible nodes
-        SELECT 
-          rp.prefix,
-          rp.representative_key as public_key,
-          rp.representative_name as node_name
-        FROM repeater_prefixes rp
-        WHERE rp.representative_key IN (SELECT node_id FROM visible_nodes)
+        -- Map variable-width prefixes back to a unique repeater public key.
+        SELECT
+          prefix,
+          any(public_key) as public_key,
+          any(node_name) as node_name,
+          count() as node_count
+        FROM (
+          SELECT source_prefix as prefix FROM path_neighbors
+          UNION DISTINCT
+          SELECT target_prefix as prefix FROM path_neighbors
+        ) prefixes
+        LEFT JOIN repeater_candidates rc ON startsWith(rc.public_key, prefixes.prefix)
+        GROUP BY prefix
+        HAVING node_count = 1
       ),
       path_connections AS (
         -- Convert prefix-based path neighbors to public key connections

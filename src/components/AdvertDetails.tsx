@@ -9,7 +9,7 @@ import { useLocale } from "./LocaleProvider";
 interface AdvertDetailsProps {
   advert: {
     group_id: number;
-    origin_path_pubkey_tuples: Array<[string, string, string]>;
+    origin_path_pubkey_tuples: Array<[string, string, string, number]>;
     advert_count: number;
     earliest_timestamp: string;
     latest_timestamp: string;
@@ -94,10 +94,11 @@ export default function AdvertDetails({ advert, initiatingNodeKey }: AdvertDetai
             {/* Path details */}
             <div>
               <PathVisualization 
-                paths={advert.origin_path_pubkey_tuples.map(([origin, path, origin_pubkey], index) => ({
+                paths={advert.origin_path_pubkey_tuples.map(([origin, path, origin_pubkey, pathLen]) => ({
                   origin: origin || origin_pubkey.substring(0, 8), // Use origin name if available, fallback to pubkey
                   pubkey: origin_pubkey,
-                  path: path
+                  path: path,
+                  pathLen,
                 }))}
                 className="text-sm"
                 initiatingNodeKey={initiatingNodeKey}

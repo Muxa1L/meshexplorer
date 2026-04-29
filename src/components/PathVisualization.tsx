@@ -18,7 +18,9 @@ import {
   TreeNode, 
   groupPathsByStructure, 
   buildTreeFromPathGroups, 
-  extractUniquePrefixes 
+  extractUniquePrefixes,
+  getPathHashSizeBytes,
+  getPubkeyPrefix,
 } from "@/lib/pathUtils";
 
 interface PathVisualizationProps {
@@ -65,8 +67,8 @@ export default function PathVisualization({
   const observerNodesByPrefix = useMemo(() => {
     const mapping = new Map<string, Array<{ name: string; publicKey: string }>>();
 
-    paths.forEach(({ origin, pubkey }) => {
-      const prefix = pubkey.substring(0, 2);
+    paths.forEach(({ origin, pubkey, path, pathLen }) => {
+      const prefix = getPubkeyPrefix(pubkey, getPathHashSizeBytes(path, pathLen));
       const nodeName = origin?.trim() || pubkey;
       const existing = mapping.get(prefix) || [];
 
@@ -191,12 +193,14 @@ export default function PathVisualization({
         const observers = Array.from(new Map(
           group.indices.map((pathIndex) => {
             const pathItem = paths[pathIndex];
+            const prefix = getPubkeyPrefix(pathItem.pubkey, getPathHashSizeBytes(pathItem.path, pathItem.pathLen));
+
             return [
               pathItem.pubkey,
               {
                 name: pathItem.origin?.trim() || pathItem.pubkey,
                 publicKey: pathItem.pubkey,
-                prefix: pathItem.pubkey.substring(0, 2),
+                prefix,
               },
             ];
           })
@@ -235,7 +239,8 @@ export default function PathVisualization({
 
   // Memoize the render function to prevent unnecessary re-renders
   const renderCustomNodeElement = useCallback(({ nodeDatum, toggleNode }: any) => {
-    const rootName = initiatingNodeKey ? initiatingNodeKey.substring(0, 2) : "??";
+    const rootSliceLength = pathGroups.find(group => group.pathSlices.length > 0)?.pathSlices[0]?.length ?? 2;
+    const rootName = initiatingNodeKey ? initiatingNodeKey.substring(0, rootSliceLength).toUpperCase() : "??";
     const isRoot = nodeDatum.name === rootName;
     const isObserverNode = observerNodesByPrefix.has(nodeDatum.name);
     
@@ -289,7 +294,7 @@ export default function PathVisualization({
         })}
       </g>
     );
-  }, [initiatingNodeKey, observerNodesByPrefix, prefixToRepeaterNodes, prefixToObserverNodes]);
+  }, [initiatingNodeKey, observerNodesByPrefix, pathGroups, prefixToRepeaterNodes, prefixToObserverNodes]);
 
   const GraphView = useCallback(() => {
     if (!showGraph || pathsCount === 0 || !treeData) return null;
@@ -353,7 +358,7 @@ export default function PathVisualization({
         </div>
       </div>
     );
-  }, [showGraph, pathsCount, treeData, graphFullscreen, handleFullscreenToggle, renderCustomNodeElement, fixedNodeSize]);
+  }, [showGraph, pathsCount, treeData, graphFullscreen, handleFullscreenToggle, renderCustomNodeElement, fixedNodeSize, t]);
 
   if (!showDropdown) {
     return (
