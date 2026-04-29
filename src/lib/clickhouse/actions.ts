@@ -26,6 +26,117 @@ export interface WardriveCoverageCell {
   appVersion: string;
 }
 
+/**
+ * Search observer/companion nodes using only meshcore_status table.
+ * Returns latest status for each unique origin_pubkey, with optional filters.
+ * @param searchParams - query, region, lastSeen, limit, exact
+ */
+export async function searchMeshcoreObservers(searchParams: {
+  query?: string;
+  region?: string;
+  lastSeen?: string | null;
+  limit?: number;
+  exact?: boolean;
+} = {}) {
+  try {
+    const {
+      query: searchString,
+      region,
+      lastSeen,
+      limit = 50,
+      exact = false,
+    } = searchParams;
+
+    const where: string[] = [];
+    const params: Record<string, any> = {};
+
+    // Search by public key or origin (node name)
+    if (searchString && searchString.trim()) {
+      const trimmedQuery = searchString.trim();
+      if (/^[0-9A-Fa-f]+$/.test(trimmedQuery)) {
+        if (exact) {
+          where.push(`origin_pubkey = {publicKeyExact:String}`);
+          params.publicKeyExact = trimmedQuery.toUpperCase();
+        } else {
+          where.push(`origin_pubkey LIKE {publicKeyPattern:String}`);
+          params.publicKeyPattern = `${trimmedQuery.toUpperCase()}%`;
+        }
+      } else {
+        if (exact) {
+          where.push(`lower(origin) = {originExact:String}`);
+          params.originExact = trimmedQuery.toLowerCase();
+        } else {
+          where.push(`lower(origin) LIKE {originPattern:String}`);
+          params.originPattern = `%${trimmedQuery.toLowerCase()}%`;
+        }
+      }
+    }
+
+    // lastSeen filter (in seconds)
+    if (lastSeen !== null && lastSeen !== undefined && lastSeen !== "") {
+      where.push(`timestamp >= now64() - INTERVAL {lastSeen:UInt32} SECOND`);
+      params.lastSeen = Number(lastSeen);
+    }
+
+    // Region filter
+    const regionFilter = generateRegionWhereClause(region);
+    if (regionFilter.whereClause) {
+      where.push(regionFilter.whereClause.replace(/broker/g, 'broker').replace(/topic/g, 'topic'));
+    }
+
+    const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+
+    // Get latest status for each unique origin_pubkey
+    const query = `
+      SELECT
+        origin_pubkey as public_key,
+        argMax(origin, timestamp) as node_name,
+        NULL as latitude,
+        NULL as longitude,
+        0 as has_location,
+        0 as is_repeater,
+        0 as is_chat_node,
+        0 as is_room_server,
+        1 as has_name,
+        min(timestamp) as first_heard,
+        max(timestamp) as last_seen,
+        argMax(broker, timestamp) as broker,
+        argMax(topic, timestamp) as topic
+      FROM meshcore_status
+      ${whereClause}
+      GROUP BY origin_pubkey
+      ORDER BY last_seen DESC
+      LIMIT {limit:UInt32}
+    `;
+    params.limit = limit;
+
+    const resultSet = await clickhouse.query({
+      query,
+      query_params: params,
+      format: 'JSONEachRow',
+    });
+    const rows = await resultSet.json();
+    return rows as Array<{
+      public_key: string;
+      node_name: string;
+      latitude: null;
+      longitude: null;
+      has_location: number;
+      is_repeater: number;
+      is_chat_node: number;
+      is_room_server: number;
+      has_name: number;
+      first_heard: string;
+      last_seen: string;
+      broker: string;
+      topic: string;
+    }>;
+  } catch (error) {
+    console.error('ClickHouse error in searchMeshcoreObservers:', error);
+    throw error;
+  }
+}
+
 export async function putSample( sample: WardriveSample ){
 // {"lat":45.07664680480957,"lon":39.04420852661133,"path":["d3"],"snr":14.5,"rssi":-29}
   await clickhouse.insert({

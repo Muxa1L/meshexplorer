@@ -9,6 +9,7 @@ import { ExternalLink } from "lucide-react";
 import NodeLinkWithHover from "./NodeLinkWithHover";
 import { useLocale } from "./LocaleProvider";
 import { useMeshcoreSearches } from "@/hooks/useMeshcoreSearch";
+import { useMeshcoreObserverSearches } from "@/hooks/useMeshcoreObserverSearch";
 import type { MeshcoreSearchResult } from "@/hooks/useMeshcoreSearch";
 import { useConfigWithRegion } from "@/hooks/useConfigWithRegion";
 import { 
@@ -87,33 +88,51 @@ export default function PathVisualization({
     [treeData]
   );
 
-  // Use the new useMeshcoreSearches hook to handle multiple prefix searches
-  // Filter out the root placeholder and final observer hops; repeater search is only for intermediate nodes
-  const searches = useMemo(() => 
-    uniquePrefixes
-      .filter(prefix => prefix !== "??" && !observerNodesByPrefix.has(prefix))
-      .map(prefix => ({
-        query: prefix,
-        exact: false,
-        limit: 20,
-        is_repeater: true, // Filter for repeaters only
-        lastSeen: 60*60*24*2, // 2 days
-        region: config?.selectedRegion,
-        enabled: showGraph && prefix.length > 0
-      }))
-  , [uniquePrefixes, observerNodesByPrefix, showGraph, config?.lastSeen, config?.selectedRegion]);
 
-  const searchResults = useMeshcoreSearches({ searches });
+  // Split prefixes for repeater and observer lookups
+  const repeaterPrefixes = useMemo(() =>
+    uniquePrefixes.filter(prefix => prefix !== "??" && !observerNodesByPrefix.has(prefix)),
+    [uniquePrefixes, observerNodesByPrefix]
+  );
+  const observerPrefixes = useMemo(() =>
+    Array.from(observerNodesByPrefix.keys()),
+    [observerNodesByPrefix]
+  );
 
-  // Create mapping from prefix to node data (name + public key)
-  const prefixToNodes = useMemo(() => {
+  // Repeater search (adverts)
+  const repeaterSearches = useMemo(() =>
+    repeaterPrefixes.map(prefix => ({
+      query: prefix,
+      exact: false,
+      limit: 20,
+      is_repeater: true,
+      lastSeen: 60*60*24*2,
+      region: config?.selectedRegion,
+      enabled: showGraph && prefix.length > 0
+    })),
+    [repeaterPrefixes, showGraph, config?.selectedRegion]
+  );
+  const repeaterResults = useMeshcoreSearches({ searches: repeaterSearches });
+
+  // Observer search (meshcore_status)
+  const observerSearches = useMemo(() =>
+    observerPrefixes.map(prefix => ({
+      query: prefix,
+      exact: false,
+      limit: 20,
+      lastSeen: 60*60*24*2,
+      region: config?.selectedRegion,
+      enabled: showGraph && prefix.length > 0
+    })),
+    [observerPrefixes, showGraph, config?.selectedRegion]
+  );
+  const observerResults = useMeshcoreObserverSearches({ searches: observerSearches });
+
+  // Create mapping from prefix to node data (name + public key) for repeaters
+  const prefixToRepeaterNodes = useMemo(() => {
     const mapping = new Map<string, Array<{ name: string; publicKey: string }>>();
-    
-    // Create searchable prefixes for repeater hops only
-    const searchablePrefixes = uniquePrefixes.filter(prefix => prefix !== "??" && !observerNodesByPrefix.has(prefix));
-    
-    searchablePrefixes.forEach((prefix, index) => {
-      const searchResult = searchResults[index];
+    repeaterPrefixes.forEach((prefix, index) => {
+      const searchResult = repeaterResults[index];
       if (searchResult?.data?.results) {
         const matchingNodes = searchResult.data.results
           .filter(result => result.public_key.toLowerCase().startsWith(prefix.toLowerCase()) && result.node_name)
@@ -122,15 +141,34 @@ export default function PathVisualization({
             publicKey: result.public_key
           }))
           .filter(node => node.name.length > 0);
-        
         if (matchingNodes.length > 0) {
           mapping.set(prefix, matchingNodes);
         }
       }
     });
-    
     return mapping;
-  }, [observerNodesByPrefix, searchResults, uniquePrefixes]);
+  }, [repeaterPrefixes, repeaterResults]);
+
+  // Create mapping from prefix to node data (name + public key) for observers
+  const prefixToObserverNodes = useMemo(() => {
+    const mapping = new Map<string, Array<{ name: string; publicKey: string }>>();
+    observerPrefixes.forEach((prefix, index) => {
+      const searchResult = observerResults[index];
+      if (searchResult?.data?.results) {
+        const matchingNodes = searchResult.data.results
+          .filter(result => result.public_key.toLowerCase().startsWith(prefix.toLowerCase()) && result.node_name)
+          .map(result => ({
+            name: result.node_name,
+            publicKey: result.public_key
+          }))
+          .filter(node => node.name.length > 0);
+        if (matchingNodes.length > 0) {
+          mapping.set(prefix, matchingNodes);
+        }
+      }
+    });
+    return mapping;
+  }, [observerPrefixes, observerResults]);
 
   // Fixed node spacing optimized for ~3 lines of text
   const fixedNodeSize = useMemo(() => ({ x: 140, y: 100 }), []);
@@ -202,7 +240,10 @@ export default function PathVisualization({
     const isObserverNode = observerNodesByPrefix.has(nodeDatum.name);
     
     // Final observer nodes use origin/origin_pubkey data; intermediate hops use repeater search results
-    const nodeData = observerNodesByPrefix.get(nodeDatum.name) || prefixToNodes.get(nodeDatum.name) || [];
+    const nodeData =
+      observerNodesByPrefix.has(nodeDatum.name)
+        ? prefixToObserverNodes.get(nodeDatum.name) || []
+        : prefixToRepeaterNodes.get(nodeDatum.name) || [];
     const isResolved = nodeData.length > 0;
 
     
@@ -226,7 +267,7 @@ export default function PathVisualization({
         </text>
         
         {/* Show all node names below circle for resolved prefixes - clickable */}
-        {isResolved && nodeData.map((node, index) => {
+        {isResolved && nodeData.map((node: { name: string; publicKey: string }, index: number) => {
           // Calculate dynamic width based on text length (approximate 6px per character + padding)
           const estimatedWidth = Math.max(60, node.name.length * 8 + 20);
           return (
@@ -248,7 +289,7 @@ export default function PathVisualization({
         })}
       </g>
     );
-  }, [initiatingNodeKey, observerNodesByPrefix, prefixToNodes]);
+  }, [initiatingNodeKey, observerNodesByPrefix, prefixToRepeaterNodes, prefixToObserverNodes]);
 
   const GraphView = useCallback(() => {
     if (!showGraph || pathsCount === 0 || !treeData) return null;
