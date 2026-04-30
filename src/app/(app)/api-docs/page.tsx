@@ -1,11 +1,11 @@
 import React from 'react';
 
+import AppPageShell from '@/components/AppPageShell';
+
 export default function ApiDocsPage() {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-neutral-800 py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white dark:bg-neutral-900 shadow rounded-lg">
-          <div className="px-6 py-8">
+    <AppPageShell contentClassName="max-w-5xl">
+      <div className="px-1 sm:px-2">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">MeshExplorer API Documentation</h1>
             <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 dark:border-yellow-500 p-4 mb-8">
               <div className="flex">
@@ -620,9 +620,7 @@ export default function ApiDocsPage() {
                 </div>
               </section>
             </div>
-          </div>
-        </div>
       </div>
-    </div>
+    </AppPageShell>
   );
 }

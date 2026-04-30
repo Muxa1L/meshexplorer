@@ -1,4 +1,5 @@
 "use client";
+import AppPageShell from "@/components/AppPageShell";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { geohashDecodeBbox } from "@/lib/wardrive/geohash";
 
@@ -318,10 +319,11 @@ export default function CoveragePage() {
   ];
 
   return (
-    <div
-      className="flex flex-col md:flex-row bg-gray-50 dark:bg-neutral-900 text-gray-900 dark:text-gray-100 overflow-hidden"
-      style={{ height: "calc(100dvh - var(--header-height))" }}
-    >
+    <AppPageShell fill padding="none" variant="none" width="full">
+      <div
+        className="flex flex-col md:flex-row bg-gray-50 dark:bg-neutral-900 text-gray-900 dark:text-gray-100 overflow-hidden"
+        style={{ height: "calc(100dvh - var(--header-height))" }}
+      >
       {/* ── Map (top on mobile, right on desktop) ── */}
       <div className="order-1 md:order-2 flex-1 relative min-h-0">
         <div ref={mapContainerRef} className="absolute inset-0" />
@@ -383,7 +385,7 @@ export default function CoveragePage() {
               disabled={loading}
               className="mt-2 w-full px-3 py-1.5 text-xs rounded bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {loading ? "Loading…" : "Refresh"}
+              {loading ? "Loading..." : "Refresh"}
             </button>
             {lastRefreshed && (
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">
@@ -488,6 +490,7 @@ export default function CoveragePage() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </AppPageShell>
   );
 }

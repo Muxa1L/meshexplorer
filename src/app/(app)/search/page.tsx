@@ -1,5 +1,6 @@
 "use client";
 
+import AppPageShell from '@/components/AppPageShell';
 import { useConfig } from '@/components/ConfigContext';
 import { useSearchQuery } from '@/hooks/useQueryParams';
 import { useMeshcoreSearch } from '@/hooks/useMeshcoreSearch';
@@ -56,8 +57,7 @@ function SearchPageContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-neutral-900">
-      <div className="max-w-4xl mx-auto px-4 py-8">
+    <AppPageShell contentClassName="max-w-4xl">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
@@ -195,8 +195,7 @@ function SearchPageContent() {
           query={query.q}
           total={data?.total || 0}
         />
-      </div>
-    </div>
+    </AppPageShell>
   );
 }
 
@@ -205,12 +204,12 @@ export default function SearchPage() {
 
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 dark:bg-neutral-900 flex items-center justify-center">
+      <AppPageShell fill contentClassName="max-w-4xl flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600 dark:text-gray-400">{t("searchPage.loadingSearch")}</p>
         </div>
-      </div>
+      </AppPageShell>
     }>
       <SearchPageContent />
     </Suspense>

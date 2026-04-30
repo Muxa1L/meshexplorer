@@ -22,7 +22,7 @@ const ChatBox = dynamic(() => import("./ChatBox"), { ssr: false });
 export default function MapWithChat({ nodePositions }: MapWithChatProps) {
   return (
     <div
-      className="flex flex-col w-screen overflow-hidden"
+      className="flex min-h-0 w-full flex-1 flex-col overflow-hidden"
       style={{ height: 'calc(100dvh - var(--header-height))' }}
     >
       <div className="flex-1 relative">

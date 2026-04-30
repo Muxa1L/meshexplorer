@@ -506,43 +506,39 @@ export default function WardrivePage() {
 
   return (
     <div
-      className="flex flex-col md:flex-row bg-gray-50 dark:bg-neutral-900 text-gray-900 dark:text-gray-100 overflow-hidden"
+      className="flex flex-col overflow-hidden bg-gray-50 text-gray-900 dark:bg-neutral-900 dark:text-gray-100 md:flex-row"
       style={{ height: 'calc(100dvh - var(--header-height))' }}
     >
-      {/* ── Map (top on mobile via order-1, right on desktop via md:order-2) ── */}
-      <div className="order-1 md:order-2 flex-1 relative min-h-0">
+      <div className="order-1 relative min-h-0 flex-1 md:order-2">
         <div ref={mapContainerRef} className="absolute inset-0" />
-        {/* Legend overlay */}
-        <div className="absolute bottom-4 left-4 bg-white/95 dark:bg-neutral-900/95 text-xs text-gray-700 dark:text-gray-300 rounded shadow p-2 z-[1000] pointer-events-none border border-gray-200 dark:border-neutral-700">
-          <div className="font-semibold mb-1">Coverage</div>
+        <div className="pointer-events-none absolute bottom-4 left-4 z-[1000] rounded border border-gray-200 bg-white/95 p-2 text-xs text-gray-700 shadow dark:border-neutral-700 dark:bg-neutral-900/95 dark:text-gray-300">
+          <div className="mb-1 font-semibold">Coverage</div>
           <div className="flex items-center gap-1">
             <span style={{ display: "inline-block", width: 12, height: 12, background: "#FFAB77", border: "1px solid #ccc" }} />
             Covered tile
           </div>
-          <div className="flex items-center gap-1 mt-1">
+          <div className="mt-1 flex items-center gap-1">
             <span style={{ display: "inline-block", width: 12, height: 12, borderRadius: "50%", background: "#ff5555", border: "2px solid #ff2222" }} />
             Your position
           </div>
           <div className="mt-2 text-gray-400">Must remain in foreground with screen on.</div>
-          <div className="text-gray-400">Does not work in Safari — use Bluefy on iOS.</div>
+          <div className="text-gray-400">Does not work in Safari. Use Bluefy on iOS.</div>
         </div>
       </div>
 
-      {/* ── Panel (bottom on mobile via order-2, left sidebar on desktop via md:order-1) ── */}
       <div
-        className={`order-2 md:order-1 flex flex-col bg-white dark:bg-neutral-900 border-t md:border-t-0 md:border-r border-gray-200 dark:border-neutral-700 md:w-80 md:flex-shrink-0 overflow-hidden md:max-h-none ${mobilePanelOpen ? "max-h-[60vh]" : "max-h-[3.25rem]"}`}
+        className={`order-2 flex max-h-[3.25rem] flex-col overflow-hidden border-t border-gray-200 bg-white dark:border-neutral-700 dark:bg-neutral-900 md:order-1 md:w-80 md:max-h-none md:flex-shrink-0 md:border-r md:border-t-0 ${mobilePanelOpen ? "max-h-[60vh]" : "max-h-[3.25rem]"}`}
       >
-        {/* Mobile compact bar – always visible, hidden on desktop */}
-        <div className="md:hidden flex items-center justify-between px-4 h-[3.25rem] flex-shrink-0 border-b border-gray-100 dark:border-neutral-800">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="text-sm font-bold">📡 Wardrive</span>
-            <span className={`text-xs font-semibold ${statusColor} truncate`}>{status}</span>
+        <div className="flex h-[3.25rem] flex-shrink-0 items-center justify-between border-b border-gray-100 px-4 dark:border-neutral-800 md:hidden">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="text-sm font-bold">Wardrive</span>
+            <span className={`truncate text-xs font-semibold ${statusColor}`}>{status}</span>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex flex-shrink-0 items-center gap-2">
             {!connected ? (
               <button
                 onClick={handleConnect}
-                className="px-2 py-1.5 text-xs rounded bg-blue-600 text-white"
+                className="rounded bg-blue-600 px-2 py-1.5 text-xs text-white"
               >
                 Connect
               </button>
@@ -550,88 +546,77 @@ export default function WardrivePage() {
               <>
                 <button
                   onClick={() => sendPing({ auto: false }).catch(console.error)}
-                  className="px-2 py-1.5 text-xs rounded bg-indigo-600 text-white"
+                  className="rounded bg-indigo-600 px-2 py-1.5 text-xs text-white"
                 >
                   Ping
                 </button>
                 <button
                   onClick={() => running ? stopAutoPing() : startAutoPing().catch(console.error)}
-                  className={`px-2 py-1.5 text-xs rounded text-white ${running ? "bg-amber-500" : "bg-indigo-600"}`}
+                  className={`rounded px-2 py-1.5 text-xs text-white ${running ? "bg-amber-500" : "bg-indigo-600"}`}
                 >
                   {running ? "Stop" : "Auto"}
                 </button>
               </>
             )}
             <button
-              onClick={() => setMobilePanelOpen(v => !v)}
-              className="p-1 text-gray-500 dark:text-gray-400 text-base leading-none"
+              onClick={() => setMobilePanelOpen((value) => !value)}
+              className="p-1 text-base leading-none text-gray-500 dark:text-gray-400"
               aria-label="Toggle panel"
             >
-              {mobilePanelOpen ? "▾" : "▴"}
+              {mobilePanelOpen ? "v" : "^"}
             </button>
           </div>
         </div>
 
-        {/* Full panel content – scrollable; on desktop always visible */}
-        <div className="overflow-y-auto flex-1">
-          {/* Header */}
-          <div className="p-4 border-b border-gray-200 dark:border-neutral-700">
-            <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100 hidden md:block">📡 MeshCore Wardrive</h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Sends location to #wardrive to build the coverage map.</p>
-            <div className="mt-2 text-sm font-semibold hidden md:block">
+        <div className="flex-1 overflow-y-auto">
+          <div className="border-b border-gray-200 p-4 dark:border-neutral-700">
+            <h1 className="hidden text-lg font-bold text-gray-900 dark:text-gray-100 md:block">MeshCore Wardrive</h1>
+            <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Sends location to #wardrive to build the coverage map.</p>
+            <div className="mt-2 hidden text-sm font-semibold md:block">
               Status: <span className={statusColor}>{status}</span>
             </div>
-            {deviceName && <div className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{deviceName}</div>}
-            {channelInfo && <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{channelInfo}</div>}
+            {deviceName && <div className="mt-0.5 text-xs text-gray-600 dark:text-gray-400">{deviceName}</div>}
+            {channelInfo && <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{channelInfo}</div>}
           </div>
 
-          {/* Current Tile */}
-          <div className="p-4 border-b border-gray-200 dark:border-neutral-700">
-            <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Current Tile</h2>
-            <div className="text-xs text-gray-600 dark:text-gray-400">Geohash: <span className="text-gray-900 dark:text-gray-100 font-mono">{currentTile}</span></div>
-            <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+          <div className="border-b border-gray-200 p-4 dark:border-neutral-700">
+            <h2 className="mb-2 text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Current Tile</h2>
+            <div className="text-xs text-gray-600 dark:text-gray-400">Geohash: <span className="font-mono text-gray-900 dark:text-gray-100">{currentTile}</span></div>
+            <div className="mt-1 text-xs text-gray-600 dark:text-gray-400">
               Needs Ping:{" "}
-              {tileNeedsPing === null ? "n/a" : tileNeedsPing ? "✅ Yes" : "⛔ No"}
+              {tileNeedsPing === null ? "n/a" : tileNeedsPing ? "Yes" : "No"}
             </div>
           </div>
 
-          {/* Connection */}
-          <div className="p-4 border-b border-gray-200 dark:border-neutral-700">
-            <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Connection</h2>
+          <div className="border-b border-gray-200 p-4 dark:border-neutral-700">
+            <h2 className="mb-2 text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Connection</h2>
             <div className="flex gap-2">
               <button
                 onClick={handleConnect}
                 disabled={connected}
-                className="flex-1 px-3 py-1.5 text-xs rounded bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-1 rounded bg-blue-600 px-3 py-1.5 text-xs text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Connect via BLE
               </button>
               <button
                 onClick={handleDisconnect}
                 disabled={!connected}
-                className="flex-1 px-3 py-1.5 text-xs rounded bg-gray-200 dark:bg-neutral-700 hover:bg-gray-300 dark:hover:bg-neutral-600 text-gray-800 dark:text-gray-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-1 rounded bg-gray-200 px-3 py-1.5 text-xs text-gray-800 hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-neutral-700 dark:text-gray-200 dark:hover:bg-neutral-600"
               >
                 Disconnect
               </button>
             </div>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">Requires Bluetooth &amp; Location permissions.</p>
+            <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">Requires Bluetooth and Location permissions.</p>
           </div>
 
-          {/* Ping controls – visible only when connected */}
           {connected && (
-            <div className="p-4 border-b border-gray-200 dark:border-neutral-700 space-y-3">
-              <h2 className="text-xs font-semibold text-gray-500 uppercase">Ping Controls</h2>
+            <div className="space-y-3 border-b border-gray-200 p-4 dark:border-neutral-700">
+              <h2 className="text-xs font-semibold uppercase text-gray-500">Ping Controls</h2>
 
               <div className="flex gap-2">
-                {/* <button
-                  onClick={() => sendPing({ auto: false }).catch(console.error)}
-                  className="flex-1 px-3 py-1.5 text-xs rounded bg-indigo-600 hover:bg-indigo-500 text-white"
-                >
-                  Send 1 Ping
-                </button> */}
                 <button
                   onClick={() => running ? stopAutoPing() : startAutoPing().catch(console.error)}
-                  className={`flex-1 px-3 py-1.5 text-xs rounded text-white ${running ? "bg-amber-500 hover:bg-amber-400" : "bg-indigo-600 hover:bg-indigo-500"}`}
+                  className={`flex-1 rounded px-3 py-1.5 text-xs text-white ${running ? "bg-amber-500 hover:bg-amber-400" : "bg-indigo-600 hover:bg-indigo-500"}`}
                 >
                   {running ? "Stop Auto" : "Start Auto"}
                 </button>
@@ -641,12 +626,12 @@ export default function WardrivePage() {
                 <label className="text-xs text-gray-600 dark:text-gray-400">Auto Ping Mode</label>
                 <select
                   value={pingMode}
-                  onChange={(e) => {
-                    const v = e.target.value as "fill" | "interval";
-                    setPingMode(v);
+                  onChange={(event) => {
+                    const value = event.target.value as "fill" | "interval";
+                    setPingMode(value);
                     if (running) stopAutoPing();
                   }}
-                  className="mt-1 w-full text-xs bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded px-2 py-1 text-gray-900 dark:text-gray-100"
+                  className="mt-1 w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 dark:border-neutral-700 dark:bg-neutral-800 dark:text-gray-100"
                 >
                   <option value="fill">Fill Missing Tiles</option>
                   <option value="interval">Interval</option>
@@ -658,21 +643,21 @@ export default function WardrivePage() {
                   <label className="text-xs text-gray-600 dark:text-gray-400">Tile Precision</label>
                   <select
                     value={fillPrecision}
-                    onChange={(e) => {
-                      const v = Number(e.target.value);
-                      setFillPrecision(v);
-                      fillPrecisionRef.current = v;
+                    onChange={(event) => {
+                      const value = Number(event.target.value);
+                      setFillPrecision(value);
+                      fillPrecisionRef.current = value;
                       coveredTilesRef.current = new Set();
                       redrawCoverage();
                       if (running) stopAutoPing();
                     }}
-                    className="mt-1 w-full text-xs bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded px-2 py-1 text-gray-900 dark:text-gray-100"
+                    className="mt-1 w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 dark:border-neutral-700 dark:bg-neutral-800 dark:text-gray-100"
                   >
-                    <option value={4}>4 — ±20 km</option>
-                    <option value={5}>5 — ±2.4 km</option>
-                    <option value={6}>6 — ±610 m</option>
-                    <option value={7}>7 — ±76 m</option>
-                    <option value={8}>8 — ±19 m</option>
+                    <option value={4}>4 - +/-20 km</option>
+                    <option value={5}>5 - +/-2.4 km</option>
+                    <option value={6}>6 - +/-610 m</option>
+                    <option value={7}>7 - +/-76 m</option>
+                    <option value={8}>8 - +/-19 m</option>
                   </select>
                 </div>
               )}
@@ -683,10 +668,9 @@ export default function WardrivePage() {
                     <label className="text-xs text-gray-600 dark:text-gray-400">Ping Interval</label>
                     <select
                       value={intervalVal}
-                      onChange={(e) => setIntervalVal(e.target.value)}
-                      className="mt-1 w-full text-xs bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded px-2 py-1 text-gray-900 dark:text-gray-100"
+                      onChange={(event) => setIntervalVal(event.target.value)}
+                      className="mt-1 w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 dark:border-neutral-700 dark:bg-neutral-800 dark:text-gray-100"
                     >
-                      {/* <option value="0.5">Every 30 seconds</option> */}
                       <option value="1">Every 1 minute</option>
                       <option value="2">Every 2 minutes</option>
                       <option value="5">Every 5 minutes</option>
@@ -697,8 +681,8 @@ export default function WardrivePage() {
                     <label className="text-xs text-gray-600 dark:text-gray-400">Min Distance</label>
                     <select
                       value={minDistVal}
-                      onChange={(e) => setMinDistVal(e.target.value)}
-                      className="mt-1 w-full text-xs bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded px-2 py-1 text-gray-900 dark:text-gray-100"
+                      onChange={(event) => setMinDistVal(event.target.value)}
+                      className="mt-1 w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 dark:border-neutral-700 dark:bg-neutral-800 dark:text-gray-100"
                     >
                       <option value="0.5">0.5 km</option>
                       <option value="1">1 km</option>
@@ -716,25 +700,23 @@ export default function WardrivePage() {
             </div>
           )}
 
-          {/* Ignored repeater */}
-          <div className="p-4 border-b border-gray-200 dark:border-neutral-700">
-            <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Ignored Repeater</h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">If you&apos;re using a mobile repeater, ignore its id.</p>
+          <div className="border-b border-gray-200 p-4 dark:border-neutral-700">
+            <h2 className="mb-2 text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Ignored Repeater</h2>
+            <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">If you are using a mobile repeater, ignore its id.</p>
             <div className="flex items-center gap-2">
               <button
                 onClick={handlePromptIgnoredId}
-                className="px-3 py-1 text-xs rounded bg-gray-200 dark:bg-neutral-700 hover:bg-gray-300 dark:hover:bg-neutral-600 text-gray-800 dark:text-gray-200"
+                className="rounded bg-gray-200 px-3 py-1 text-xs text-gray-800 hover:bg-gray-300 dark:bg-neutral-700 dark:text-gray-200 dark:hover:bg-neutral-600"
               >
                 Set
               </button>
-              <span className="text-xs text-gray-900 dark:text-gray-100 font-mono">{ignoredIdDisplay}</span>
+              <span className="font-mono text-xs text-gray-900 dark:text-gray-100">{ignoredIdDisplay}</span>
             </div>
           </div>
 
-          {/* Log */}
           <div className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Log</h2>
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Log</h2>
               <button
                 onClick={() => {
                   if (!confirm("Clear local wardrive log?")) return;
@@ -743,7 +725,7 @@ export default function WardrivePage() {
                   setLastSampleText("None yet");
                   try { localStorage.removeItem(LOG_KEY); } catch {}
                 }}
-                className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                className="text-xs text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
               >
                 Clear
               </button>
@@ -751,27 +733,27 @@ export default function WardrivePage() {
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-gray-700 dark:text-gray-300" style={{ minWidth: 260 }}>
                 <thead>
-                  <tr className="text-gray-500 border-b border-gray-200 dark:border-neutral-700">
-                    <th className="text-left pb-1">Time</th>
-                    <th className="text-left pb-1">Mode</th>
-                    <th className="text-center pb-1">Mesh</th>
-                    <th className="text-center pb-1">Svc</th>
+                  <tr className="border-b border-gray-200 text-gray-500 dark:border-neutral-700">
+                    <th className="pb-1 text-left">Time</th>
+                    <th className="pb-1 text-left">Mode</th>
+                    <th className="pb-1 text-center">Mesh</th>
+                    <th className="pb-1 text-center">Svc</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {displayedLog.map((entry, i) => (
-                    <tr key={i} className="border-b border-gray-100 dark:border-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-800">
-                      <td className="py-0.5 pr-1 whitespace-nowrap">
+                  {displayedLog.map((entry, index) => (
+                    <tr key={index} className="border-b border-gray-100 hover:bg-gray-50 dark:border-neutral-800 dark:hover:bg-neutral-800">
+                      <td className="whitespace-nowrap py-0.5 pr-1">
                         {new Date(entry.timestamp).toLocaleTimeString()}
                       </td>
                       <td className="py-0.5 pr-1">
                         {entry.skipped ? <span className="text-gray-400 dark:text-gray-500">skip</span> : entry.mode}
                       </td>
                       <td className="py-0.5 text-center">
-                        {entry.sentToMesh ? "✅" : entry.skipped ? "—" : "❌"}
+                        {entry.sentToMesh ? "yes" : entry.skipped ? "-" : "no"}
                       </td>
                       <td className="py-0.5 text-center">
-                        {entry.sentToService ? "✅" : entry.skipped ? "—" : "❌"}
+                        {entry.sentToService ? "yes" : entry.skipped ? "-" : "no"}
                       </td>
                     </tr>
                   ))}
@@ -779,7 +761,7 @@ export default function WardrivePage() {
               </table>
             </div>
             {displayedLog.length === 0 && (
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">No log entries yet.</p>
+              <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">No log entries yet.</p>
             )}
           </div>
         </div>

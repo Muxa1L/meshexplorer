@@ -1,5 +1,6 @@
 "use client";
 
+import AppPageShell from "@/components/AppPageShell";
 import { useConfig } from "@/components/ConfigContext";
 import { getRegionDisplayName } from "@/lib/regions";
 import PacketCountChart from "@/components/PacketCountChart";
@@ -17,7 +18,7 @@ export default function PacketCountPage() {
     : null;
 
   return (
-    <div className="max-w-6xl w-full mx-auto my-4 py-2 px-4 text-gray-800 dark:text-gray-200 bg-white dark:bg-neutral-900 rounded-lg shadow-lg">
+    <AppPageShell>
       <div className="flex items-center justify-between mb-6">
         <div>
           <Link
@@ -40,6 +41,6 @@ export default function PacketCountPage() {
       </p>
 
       <PacketCountChart region={region} />
-    </div>
+    </AppPageShell>
   );
 }

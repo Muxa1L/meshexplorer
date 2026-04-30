@@ -1,5 +1,6 @@
 "use client";
 
+import AppPageShell from "@/components/AppPageShell";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import moment from "moment";
@@ -58,12 +59,12 @@ export default function MeshcoreNodePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-neutral-800 flex items-center justify-center">
+      <AppPageShell fill contentClassName="flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600 dark:text-gray-300">{t("nodePage.loading")}</p>
         </div>
-      </div>
+      </AppPageShell>
     );
   }
 
@@ -156,7 +157,7 @@ export default function MeshcoreNodePage() {
     };
 
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-neutral-800 flex items-center justify-center">
+      <AppPageShell fill contentClassName="flex items-center justify-center">
         <div className="text-center max-w-md mx-auto px-4">
           <div className="text-6xl mb-4">{getErrorIcon(errorCode)}</div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
@@ -182,17 +183,17 @@ export default function MeshcoreNodePage() {
             </div>
           </div>
         </div>
-      </div>
+      </AppPageShell>
     );
   }
 
   if (!nodeData) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-neutral-800 flex items-center justify-center">
+      <AppPageShell fill contentClassName="flex items-center justify-center">
         <div className="text-center">
           <div className="text-gray-600 dark:text-gray-300">{t("nodePage.noData")}</div>
         </div>
-      </div>
+      </AppPageShell>
     );
   }
 
@@ -200,8 +201,7 @@ export default function MeshcoreNodePage() {
 
   return (
     <RegionProvider region={region}>
-      <div className="min-h-screen bg-gray-50 dark:bg-neutral-800 py-8">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <AppPageShell contentClassName="max-w-6xl">
         {/* Header */}
         <div className="bg-white dark:bg-neutral-900 shadow rounded-lg mb-6">
           <div className="px-6 py-8">
@@ -498,8 +498,7 @@ export default function MeshcoreNodePage() {
               )}
             </div>
           </div>
-      </div>
-    </div>
+      </AppPageShell>
     </RegionProvider>
   );
 }
