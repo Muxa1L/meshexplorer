@@ -11,6 +11,7 @@ export async function GET(req: NextRequest) {
   const originPubkey = searchParams.get('originPubkey');
   const pollInterval = searchParams.get('pollInterval');
   const maxRows = searchParams.get('maxRows');
+  const skipInitialMessages = searchParams.has('skipInitialMessages');
 
   // Validate region against allowed values
   const allowedRegions = ['krasnodar_pub', 'stavropol']; // Add more allowed regions as needed  
@@ -57,6 +58,7 @@ export async function GET(req: NextRequest) {
   // Override config with validated values
   config.pollInterval = validPollInterval;
   config.maxRowsPerPoll = validMaxRows;
+  config.skipInitialMessages = skipInitialMessages;
 
   const streamer = createClickHouseStreamer(config);
   
@@ -73,8 +75,8 @@ export async function GET(req: NextRequest) {
 
         for await (const result of streamer(params)) {
           const data = JSON.stringify(result.row);
-          
-          controller.enqueue(encoder.encode(`${data}\n`));
+
+          controller.enqueue(encoder.encode(`data: ${data}\n\n`));
         }
       } catch (error) {
         console.error('Meshcore packets streaming error:', error);
@@ -83,8 +85,8 @@ export async function GET(req: NextRequest) {
           message: error instanceof Error ? error.message : 'Unknown error',
           timestamp: new Date().toISOString()
         });
-        
-        controller.enqueue(encoder.encode(`${errorData}\n\n`));
+
+        controller.enqueue(encoder.encode(`event: error\ndata: ${errorData}\n\n`));
       } finally {
         controller.close();
       }

@@ -331,7 +331,8 @@ export function createMeshcorePacketsStreamerConfig(
         payload_type,
         payload_version,
         header,
-        hex(origin_pubkey) AS origin_pubkey
+        hex(origin_pubkey) AS origin_pubkey,
+        message_hash
       FROM meshcore_packets 
       WHERE ingest_timestamp > {lastTimestamp:DateTime64}
       ORDER BY ingest_timestamp DESC

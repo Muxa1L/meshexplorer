@@ -10,7 +10,7 @@ import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import { useConfig } from "./ConfigContext";
 import RefreshButton from "@/components/RefreshButton";
 import MapLayerSettingsComponent from "@/components/MapLayerSettings";
-import { type MapLayerSettings } from "@/hooks/useMapLayerSettings";
+import { LIVE_PACKET_TYPE_OPTIONS, type MapLayerSettings, type PacketTypeFilter } from "@/hooks/useMapLayerSettings";
 import { NodeMarker, ClusterMarker, PopupContent } from "./MapIcons";
 import { renderToString } from "react-dom/server";
 import { buildApiUrl } from "@/lib/api";
@@ -20,6 +20,7 @@ import { type AllNeighborsConnection } from "@/hooks/useAllNeighbors";
 import { useQueryParams } from "@/hooks/useQueryParams";
 import WardriveCoverageLayer from "@/components/WardriveCoverageLayer";
 import { useLocale } from "./LocaleProvider";
+import { getPathHashSizeBytes, getPubkeyPrefix, splitPathHex } from "@/lib/pathUtils";
 
 const DEFAULT = {
   lat: 45.02756,
@@ -52,6 +53,154 @@ function getDefaultMapView(region?: string) {
   }
 
   return DEFAULT;
+}
+
+interface LiveMeshPacket {
+  ingest_timestamp: string;
+  path_len: number;
+  path: string;
+  route_type: number;
+  payload_type: number;
+  origin_pubkey: string;
+  message_hash?: string;
+}
+
+interface ActivePacketAnimation {
+  id: string;
+  startedAt: number;
+  durationMs: number;
+  points: [number, number][];
+  segmentLengths: number[];
+  totalLength: number;
+  marker: L.CircleMarker;
+  markerGlow: L.CircleMarker;
+  trail: L.Polyline;
+  trailGlow: L.Polyline;
+}
+
+const LIVE_PACKET_COLORS: Record<number, string> = {
+  0x02: '#2dd4bf',
+  0x04: '#38bdf8',
+  0x05: '#a3e635',
+  0x08: '#c084fc',
+  0x09: '#fb7185',
+};
+
+function getLivePacketColor(payloadType: number) {
+  return LIVE_PACKET_COLORS[payloadType] ?? '#f59e0b';
+}
+
+function isLivePacketTypeEnabled(payloadType: number, enabledTypes: Set<PacketTypeFilter>) {
+  const normalizedType = String(payloadType) as PacketTypeFilter;
+  if (enabledTypes.has(normalizedType)) {
+    return true;
+  }
+
+  return !LIVE_PACKET_COLORS[payloadType] && enabledTypes.has('other');
+}
+
+function buildNodePrefixLookup(nodes: NodePosition[]) {
+  const lookups = new Map<number, Map<string, NodePosition | null>>();
+
+  for (const hashSizeBytes of [1, 2, 3]) {
+    const lookup = new Map<string, NodePosition | null>();
+
+    for (const node of nodes) {
+      if (!Number.isFinite(node.latitude) || !Number.isFinite(node.longitude)) {
+        continue;
+      }
+
+      const prefix = getPubkeyPrefix(node.node_id, hashSizeBytes);
+      const existing = lookup.get(prefix);
+
+      if (!existing) {
+        lookup.set(prefix, node);
+      } else if (existing.node_id !== node.node_id) {
+        lookup.set(prefix, null);
+      }
+    }
+
+    lookups.set(hashSizeBytes, lookup);
+  }
+
+  return lookups;
+}
+
+function buildPacketPropagationPath(
+  packet: LiveMeshPacket,
+  nodePrefixLookup: Map<number, Map<string, NodePosition | null>>,
+) {
+  if (!packet.path || packet.path_len < 1) {
+    return null;
+  }
+
+  const hashSizeBytes = getPathHashSizeBytes(packet.path, packet.path_len);
+  const prefixLookup = nodePrefixLookup.get(hashSizeBytes);
+
+  if (!prefixLookup) {
+    return null;
+  }
+
+  const prefixes = [
+    getPubkeyPrefix(packet.origin_pubkey, hashSizeBytes),
+    ...splitPathHex(packet.path, packet.path_len),
+  ].filter(Boolean);
+
+  const points: [number, number][] = [];
+  let lastNodeId: string | null = null;
+
+  for (const prefix of prefixes) {
+    const node = prefixLookup.get(prefix);
+    if (!node || node.node_id === lastNodeId) {
+      continue;
+    }
+
+    points.push([node.latitude, node.longitude]);
+    lastNodeId = node.node_id;
+  }
+
+  return points.length >= 2 ? points : null;
+}
+
+function getSegmentLengths(points: [number, number][]) {
+  const lengths: number[] = [];
+
+  for (let index = 1; index < points.length; index += 1) {
+    const [startLat, startLng] = points[index - 1];
+    const [endLat, endLng] = points[index];
+    lengths.push(Math.hypot(endLat - startLat, endLng - startLng));
+  }
+
+  return lengths;
+}
+
+function getPointAlongPath(animation: ActivePacketAnimation, progress: number): [number, number] {
+  if (animation.points.length === 1 || animation.totalLength <= 0) {
+    return animation.points[0];
+  }
+
+  const targetDistance = animation.totalLength * progress;
+  let coveredDistance = 0;
+
+  for (let index = 0; index < animation.segmentLengths.length; index += 1) {
+    const segmentLength = animation.segmentLengths[index];
+    const nextDistance = coveredDistance + segmentLength;
+
+    if (targetDistance <= nextDistance || index === animation.segmentLengths.length - 1) {
+      const localProgress = segmentLength === 0 ? 0 : (targetDistance - coveredDistance) / segmentLength;
+      const [startLat, startLng] = animation.points[index];
+      const [endLat, endLng] = animation.points[index + 1];
+
+      return [
+        startLat + ((endLat - startLat) * localProgress),
+        startLng + ((endLng - startLng) * localProgress),
+      ];
+    }
+
+    coveredDistance = nextDistance;
+  }
+
+  return animation.points[animation.points.length - 1];
 }
 
 
@@ -496,6 +645,245 @@ function AllNeighborLines({
   );
 }
 
+function LivePacketPropagation({
+  nodes,
+  region,
+  enabled,
+  enabledPacketTypes,
+}: {
+  nodes: NodePosition[];
+  region?: string;
+  enabled: boolean;
+  enabledPacketTypes: PacketTypeFilter[];
+}) {
+  const map = useMap();
+  const nodePrefixLookup = useMemo(() => buildNodePrefixLookup(nodes), [nodes]);
+  const enabledPacketTypeSet = useMemo(() => new Set(enabledPacketTypes), [enabledPacketTypes]);
+  const nodePrefixLookupRef = useRef(nodePrefixLookup);
+  const layerGroupRef = useRef<L.LayerGroup | null>(null);
+  const animationsRef = useRef<ActivePacketAnimation[]>([]);
+  const seenPacketIdsRef = useRef<Map<string, number>>(new Map());
+
+  useEffect(() => {
+    nodePrefixLookupRef.current = nodePrefixLookup;
+  }, [nodePrefixLookup]);
+
+  useEffect(() => {
+    const paneName = 'live-packet-propagation-pane';
+    if (!map.getPane(paneName)) {
+      map.createPane(paneName);
+    }
+
+    const pane = map.getPane(paneName);
+    if (pane) {
+      pane.style.zIndex = '690';
+      pane.style.pointerEvents = 'none';
+    }
+
+    const layerGroup = L.layerGroup().addTo(map);
+    layerGroupRef.current = layerGroup;
+
+    return () => {
+      animationsRef.current.forEach((animation) => {
+        animation.marker.remove();
+        animation.trail.remove();
+      });
+      animationsRef.current = [];
+      layerGroup.remove();
+      layerGroupRef.current = null;
+    };
+  }, [map]);
+
+  useEffect(() => {
+    let frameId = 0;
+
+    const animate = (timestamp: number) => {
+      animationsRef.current = animationsRef.current.filter((animation) => {
+        const elapsed = timestamp - animation.startedAt;
+        const progress = elapsed / animation.durationMs;
+
+        if (progress >= 1) {
+          animation.marker.remove();
+          animation.markerGlow.remove();
+          animation.trail.remove();
+          animation.trailGlow.remove();
+          return false;
+        }
+
+        const [lat, lng] = getPointAlongPath(animation, progress);
+        const visibility = progress < 0.12
+          ? progress / 0.12
+          : progress > 0.88
+            ? (1 - progress) / 0.12
+            : 1;
+        const emphasis = 0.45 + (visibility * 0.9);
+
+        animation.marker.setLatLng([lat, lng]);
+        animation.markerGlow.setLatLng([lat, lng]);
+        animation.marker.setRadius(4 + (visibility * 2));
+        animation.markerGlow.setRadius(8 + (visibility * 5));
+        animation.marker.setStyle({
+          opacity: 0.55 + (visibility * 0.45),
+          fillOpacity: 0.65 + (visibility * 0.35),
+        });
+        animation.markerGlow.setStyle({
+          opacity: 0.08 + (visibility * 0.18),
+          fillOpacity: 0.12 + (visibility * 0.28),
+        });
+        animation.trail.setStyle({
+          opacity: 0.2 + ((1 - progress) * 0.28),
+          weight: 2.5 + emphasis,
+        });
+        animation.trailGlow.setStyle({
+          opacity: 0.06 + ((1 - progress) * 0.14),
+          weight: 7 + (emphasis * 2.5),
+        });
+
+        return true;
+      });
+
+      frameId = window.requestAnimationFrame(animate);
+    };
+
+    frameId = window.requestAnimationFrame(animate);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!enabled || nodes.length === 0 || enabledPacketTypeSet.size === 0) {
+      return;
+    }
+
+    const paneName = 'live-packet-propagation-pane';
+    const regionParam = region ? `&region=${encodeURIComponent(region)}` : '';
+    const streamUrl = buildApiUrl(
+      `/api/meshcore/stream/packets?pollInterval=1000&maxRows=24${regionParam}`,
+    );
+    const eventSource = new EventSource(streamUrl);
+
+    eventSource.onmessage = (event) => {
+      const layerGroup = layerGroupRef.current;
+      if (!layerGroup) {
+        return;
+      }
+
+      try {
+        const packet = JSON.parse(event.data) as LiveMeshPacket & { type?: string };
+        if (packet.type === 'error') {
+          return;
+        }
+
+        if (!isLivePacketTypeEnabled(packet.payload_type, enabledPacketTypeSet)) {
+          return;
+        }
+
+        const packetId = packet.message_hash
+          || `${packet.ingest_timestamp}|${packet.origin_pubkey}|${packet.path}|${packet.payload_type}|${packet.route_type}`;
+        const now = Date.now();
+
+        for (const [seenId, seenAt] of seenPacketIdsRef.current.entries()) {
+          if (now - seenAt > 120000) {
+            seenPacketIdsRef.current.delete(seenId);
+          }
+        }
+
+        if (seenPacketIdsRef.current.has(packetId)) {
+          return;
+        }
+        seenPacketIdsRef.current.set(packetId, now);
+
+        const points = buildPacketPropagationPath(packet, nodePrefixLookupRef.current);
+        if (!points) {
+          return;
+        }
+
+        const segmentLengths = getSegmentLengths(points);
+        const totalLength = segmentLengths.reduce((sum, length) => sum + length, 0);
+        if (totalLength <= 0) {
+          return;
+        }
+
+        const color = getLivePacketColor(packet.payload_type);
+        const trailGlow = L.polyline(points, {
+          pane: paneName,
+          color,
+          weight: 7,
+          opacity: 0.16,
+          lineCap: 'round',
+          lineJoin: 'round',
+          interactive: false,
+        }).addTo(layerGroup);
+        const trail = L.polyline(points, {
+          pane: paneName,
+          color,
+          weight: 3,
+          opacity: 0.42,
+          lineCap: 'round',
+          lineJoin: 'round',
+          interactive: false,
+        }).addTo(layerGroup);
+        const markerGlow = L.circleMarker(points[0], {
+          pane: paneName,
+          radius: 9,
+          stroke: false,
+          fillColor: color,
+          fillOpacity: 0.22,
+          opacity: 0.18,
+          interactive: false,
+        }).addTo(layerGroup);
+        const marker = L.circleMarker(points[0], {
+          pane: paneName,
+          radius: 5,
+          color: '#ffffff',
+          weight: 1.5,
+          fillColor: color,
+          fillOpacity: 1,
+          opacity: 1,
+          interactive: false,
+        }).addTo(layerGroup);
+
+        animationsRef.current.push({
+          id: packetId,
+          startedAt: performance.now(),
+          durationMs: Math.max(1400, 900 + (points.length * 450)),
+          points,
+          segmentLengths,
+          totalLength,
+          marker,
+          markerGlow,
+          trail,
+          trailGlow,
+        });
+
+        if (animationsRef.current.length > 80) {
+          const overflow = animationsRef.current.splice(0, animationsRef.current.length - 80);
+          overflow.forEach((animation) => {
+            animation.marker.remove();
+            animation.markerGlow.remove();
+            animation.trail.remove();
+            animation.trailGlow.remove();
+          });
+        }
+      } catch (error) {
+        console.error('Failed to process live packet propagation event:', error);
+      }
+    };
+
+    eventSource.onerror = () => {
+      // Let EventSource reconnect automatically.
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [enabled, enabledPacketTypeSet, nodes.length, region]);
+
+  return null;
+}
+
 function MapViewSync({ center, zoom }: { center: [number, number]; zoom: number }) {
   const map = useMap();
 
@@ -547,6 +935,8 @@ export default function MapView({ target = '_self' }: MapViewProps = {}) {
     nodeTypes: ["meshcore"],
     showMeshcoreCoverageOverlay: false,
     minPacketCount: 1,
+    showLivePacketPropagation: true,
+    livePacketTypes: ['2', '4', '5', '8', '9', 'other'],
     showWardriveOverlay: false,
     wardriveResolution: 7,
   });
@@ -583,6 +973,20 @@ export default function MapView({ target = '_self' }: MapViewProps = {}) {
   useEffect(() => {
     setShowAllNeighbors(mapLayerSettings.showAllNeighbors);
   }, [mapLayerSettings.showAllNeighbors]);
+
+  const toggleLivePacketType = useCallback((packetType: PacketTypeFilter) => {
+    setMapLayerSettings((currentSettings) => {
+      const isEnabled = currentSettings.livePacketTypes.includes(packetType);
+      const nextTypes = isEnabled
+        ? currentSettings.livePacketTypes.filter((type) => type !== packetType)
+        : [...currentSettings.livePacketTypes, packetType];
+
+      return {
+        ...currentSettings,
+        livePacketTypes: nextTypes,
+      };
+    });
+  }, []);
   
   // Use TanStack Query for neighbors data
   const { data: neighbors = [], isLoading: neighborsLoading } = useNeighbors({
@@ -877,6 +1281,12 @@ export default function MapView({ target = '_self' }: MapViewProps = {}) {
             enableClustering={mapLayerSettings.enableClustering}
           />
         )}
+        <LivePacketPropagation
+          nodes={nodePositions}
+          region={config?.selectedRegion}
+          enabled={mapLayerSettings.showLivePacketPropagation}
+          enabledPacketTypes={mapLayerSettings.livePacketTypes}
+        />
         <NeighborLines 
           selectedNodeId={selectedNodeId}
           neighbors={neighbors}
@@ -968,6 +1378,97 @@ export default function MapView({ target = '_self' }: MapViewProps = {}) {
           </div>
         );
       })()}
+
+      {mapLayerSettings.showLivePacketPropagation && (
+        <div style={{
+          position: "absolute",
+          top: 84,
+          left: 16,
+          zIndex: 1000,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          padding: '12px',
+          borderRadius: '8px',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+          fontSize: '12px',
+          fontFamily: 'monospace',
+          minWidth: '190px',
+        }}>
+          <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>
+            {t("mapSettings.packetLegend")}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+            {LIVE_PACKET_TYPE_OPTIONS.map((packetType) => {
+              const isEnabled = mapLayerSettings.livePacketTypes.includes(packetType.key);
+
+              return (
+                <button
+                  key={packetType.key}
+                  type="button"
+                  onClick={() => toggleLivePacketType(packetType.key)}
+                  title={t(packetType.labelKey)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    width: '100%',
+                    border: 'none',
+                    background: isEnabled ? 'rgba(15, 23, 42, 0.05)' : 'transparent',
+                    borderRadius: '6px',
+                    padding: '4px 6px',
+                    cursor: 'pointer',
+                    opacity: isEnabled ? 1 : 0.45,
+                    textAlign: 'left',
+                    transition: 'background-color 120ms ease, opacity 120ms ease',
+                  }}
+                >
+                  <div style={{ position: 'relative', width: '20px', height: '10px' }}>
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        right: 0,
+                        top: '50%',
+                        height: '6px',
+                        transform: 'translateY(-50%)',
+                        borderRadius: '999px',
+                        backgroundColor: packetType.color,
+                        opacity: isEnabled ? 0.2 : 0.1,
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        right: 0,
+                        top: '50%',
+                        height: '2px',
+                        transform: 'translateY(-50%)',
+                        borderRadius: '999px',
+                        backgroundColor: packetType.color,
+                        opacity: isEnabled ? 0.8 : 0.45,
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        right: 0,
+                        top: '50%',
+                        width: '8px',
+                        height: '8px',
+                        transform: 'translateY(-50%)',
+                        borderRadius: '999px',
+                        backgroundColor: packetType.color,
+                        boxShadow: isEnabled ? `0 0 8px ${packetType.color}` : 'none',
+                      }}
+                    />
+                  </div>
+                  <span>{t(packetType.labelKey)}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

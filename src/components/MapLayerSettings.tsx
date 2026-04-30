@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useRef, useEffect } from 'react';
-import { useMapLayerSettings, TILE_LAYERS, NODE_TYPE_OPTIONS, type MapLayerSettings } from '@/hooks/useMapLayerSettings';
+import { useMapLayerSettings, TILE_LAYERS, NODE_TYPE_OPTIONS, LIVE_PACKET_TYPE_OPTIONS, type MapLayerSettings, type PacketTypeFilter } from '@/hooks/useMapLayerSettings';
 import { Square3Stack3DIcon } from '@heroicons/react/24/outline';
 import { useLocale } from './LocaleProvider';
 
@@ -41,6 +41,16 @@ export default function MapLayerSettingsComponent({ onSettingsChange }: MapLayer
 
   const updateSetting = <K extends keyof MapLayerSettings>(key: K, value: MapLayerSettings[K]) => {
     setSettings(prev => ({ ...prev, [key]: value }));
+  };
+
+  const toggleLivePacketType = (packetType: PacketTypeFilter, checked: boolean) => {
+    const currentTypes = settings.livePacketTypes;
+    if (checked) {
+      updateSetting('livePacketTypes', [...currentTypes, packetType]);
+      return;
+    }
+
+    updateSetting('livePacketTypes', currentTypes.filter((type) => type !== packetType));
   };
 
   return (
@@ -196,6 +206,50 @@ export default function MapLayerSettingsComponent({ onSettingsChange }: MapLayer
             }`}>
               {t("mapSettings.minPacketCountHelp")}
             </p>
+          </div>
+
+          <label className="flex items-center gap-2 mb-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={settings.showLivePacketPropagation}
+              onChange={(e) => updateSetting('showLivePacketPropagation', e.target.checked)}
+              className="rounded"
+            />
+            <span className="text-sm text-gray-700 dark:text-gray-300">{t("mapSettings.showLivePacketPropagation")}</span>
+          </label>
+
+          <div className="ml-6 mb-3">
+            <label className={`block text-sm mb-1 ${
+              settings.showLivePacketPropagation
+                ? 'text-gray-700 dark:text-gray-300'
+                : 'text-gray-400 dark:text-gray-500'
+            }`}>
+              {t("mapSettings.packetTypeFilters")}
+            </label>
+            <div className="space-y-1">
+              {LIVE_PACKET_TYPE_OPTIONS.map((packetType) => (
+                <label key={packetType.key} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={settings.livePacketTypes.includes(packetType.key)}
+                    onChange={(e) => toggleLivePacketType(packetType.key, e.target.checked)}
+                    disabled={!settings.showLivePacketPropagation}
+                    className="rounded"
+                  />
+                  <span
+                    className="inline-block h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: packetType.color }}
+                  />
+                  <span className={`text-sm ${
+                    settings.showLivePacketPropagation
+                      ? 'text-gray-700 dark:text-gray-300'
+                      : 'text-gray-400 dark:text-gray-500'
+                  }`}>
+                    {t(packetType.labelKey)}
+                  </span>
+                </label>
+              ))}
+            </div>
           </div>
 
           {/* Tile layer */}
