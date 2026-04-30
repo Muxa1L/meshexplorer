@@ -784,7 +784,8 @@ export async function getAllNodeNeighbors(lastSeen: string | null = null, minLat
           UNION DISTINCT
           SELECT target_prefix as prefix FROM path_neighbors
         ) prefixes
-        LEFT JOIN repeater_candidates rc ON startsWith(rc.public_key, prefixes.prefix)
+        CROSS JOIN repeater_candidates rc
+        WHERE startsWith(rc.public_key, prefixes.prefix)
         GROUP BY prefix
         HAVING node_count = 1
       ),
