@@ -229,4 +229,26 @@ html {
   font-weight: 500;
   box-shadow: 0 1px 2px rgba(0,0,0,0.07);
   z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.custom-node-label__role-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+}
+
+.custom-node-label--blue {
+  border-left: 2px solid #2563eb;
+}
+
+.custom-node-label--green {
+  border-left: 2px solid #22c55e;
+}
+
+.custom-node-label--red {
+  border-left: 2px solid #dc2626;
 }

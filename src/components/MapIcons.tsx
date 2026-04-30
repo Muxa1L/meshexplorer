@@ -21,9 +21,37 @@ interface PopupContentProps {
   target?: '_blank' | '_self' | '_parent' | '_top';
 }
 
+function getNodeRoleMeta(node: NodePosition, t?: (key: string) => string) {
+  if (node.is_room_server) {
+    return {
+      label: t ? t("advert.roomServer") : "Room Server",
+      color: "#dc2626",
+      labelClassName: "custom-node-label--red",
+      markerClassName: "custom-node-marker--red",
+    };
+  }
+
+  if (node.is_chat_node) {
+    return {
+      label: t ? t("advert.companion") : "Companion",
+      color: "#22c55e",
+      labelClassName: "custom-node-label--green",
+      markerClassName: "custom-node-marker--green",
+    };
+  }
+
+  return {
+    label: t ? t("advert.repeater") : "Repeater",
+    color: "#2563eb",
+    labelClassName: "custom-node-label--blue",
+    markerClassName: "custom-node-marker--blue",
+  };
+}
+
 // Individual node marker component
 export function NodeMarker({ node, showNodeNames = true, isSelected = false, isLoadingNeighbors = false }: NodeMarkerProps) {
   const markerLabel = node.display_prefix || node.node_id.substring(0, 2).toUpperCase();
+  const roleMeta = getNodeRoleMeta(node);
   const markerWidth = Math.max(22, markerLabel.length * 8 + 10);
   const markerHeight = 22;
   const markerStyle = {
@@ -42,13 +70,7 @@ export function NodeMarker({ node, showNodeNames = true, isSelected = false, isL
     if (node.type === "meshtastic") {
       baseClass += " custom-node-marker--green";
     } else if (node.type === "meshcore") {
-      if (node.is_room_server) {
-        baseClass += " custom-node-marker--red";
-      } else if (node.is_chat_node) {
-        baseClass += " custom-node-marker--green";
-      } else {
-        baseClass += " custom-node-marker--blue";
-      }
+      baseClass += ` ${roleMeta.markerClassName}`;
       baseClass += " custom-node-marker--top";
     }
     
@@ -63,7 +85,10 @@ export function NodeMarker({ node, showNodeNames = true, isSelected = false, isL
   return (
     <div className="custom-node-marker-container" style={containerStyle}>
       {showNodeNames && node.short_name && (
-        <div className="custom-node-label">
+        <div className={`custom-node-label ${node.type === "meshcore" ? roleMeta.labelClassName : ""}`}>
+          {node.type === "meshcore" && (
+            <span className="custom-node-label__role-dot" style={{ backgroundColor: roleMeta.color }} />
+          )}
           {node.type === "meshcore" ? getNameIconLabel(node.name || node.short_name) : node.short_name}
         </div>
       )}
@@ -177,6 +202,7 @@ export function PopupContent({ node, target = '_self' }: PopupContentProps) {
     for (const part of parts) current = current?.[part];
     return typeof current === 'string' ? current : key;
   };
+  const roleMeta = getNodeRoleMeta(node, t);
 
   return (
     <div>
@@ -184,6 +210,34 @@ export function PopupContent({ node, target = '_self' }: PopupContentProps) {
       <div><b>{t("mapPopup.fullName")}:</b> {node.name ?? "-"}</div>
       <div><b>{t("mapPopup.shortName")}:</b> {node.type === "meshcore" && node.short_name ? getNameIconLabel(node.name || node.short_name) : (node.short_name ?? "-")}</div>
       <div><b>{t("mapPopup.type")}:</b> {node.type ?? "-"}</div>
+      {node.type === "meshcore" && (
+        <div>
+          <b>{t("advert.nodeCapabilities")}:</b>{" "}
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '2px 8px',
+              borderRadius: '999px',
+              backgroundColor: `${roleMeta.color}1A`,
+              color: roleMeta.color,
+              fontSize: '12px',
+              fontWeight: 600,
+            }}
+          >
+            <span
+              style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '999px',
+                backgroundColor: roleMeta.color,
+              }}
+            />
+            {roleMeta.label}
+          </span>
+        </div>
+      )}
       <div><b>{t("mapPopup.lat")}:</b> {node.latitude}</div>
       <div><b>{t("mapPopup.lng")}:</b> {node.longitude}</div>
       <div><b>{t("mapPopup.alt")}:</b> {node.altitude !== undefined ? node.altitude : "-"}</div>
