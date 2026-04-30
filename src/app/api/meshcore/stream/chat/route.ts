@@ -89,7 +89,7 @@ export async function GET(req: NextRequest) {
           }
 
           const data = JSON.stringify(outputData);
-          controller.enqueue(encoder.encode(`${data}\n`));
+          controller.enqueue(encoder.encode(`data: ${data}\n\n`));
         }
       } catch (error) {
         console.error('Meshcore chat streaming error:', error);
@@ -98,8 +98,8 @@ export async function GET(req: NextRequest) {
           message: error instanceof Error ? error.message : 'Unknown error',
           timestamp: new Date().toISOString()
         });
-        
-        controller.enqueue(encoder.encode(`${errorData}\n`));
+
+        controller.enqueue(encoder.encode(`event: error\ndata: ${errorData}\n\n`));
       } finally {
         controller.close();
       }

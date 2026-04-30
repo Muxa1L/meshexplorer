@@ -1,7 +1,7 @@
 "use client";
 
-import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo } from 'react';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo } from 'react';
 import { buildApiUrl } from '@/lib/api';
 import { ChatMessage } from '@/components/ChatMessageItem';
 
@@ -19,6 +19,54 @@ interface ChatMessagesPage {
 }
 
 const PAGE_SIZE = 20;
+
+function mergeNewMessages(
+  oldData: any,
+  incomingMessages: ChatMessage[],
+) {
+  if (!oldData?.pages?.[0] || incomingMessages.length === 0) {
+    return oldData;
+  }
+
+  const allExistingMessages = oldData.pages.flatMap((page: any) => page.messages);
+  const trulyNewMessages: ChatMessage[] = [];
+  const updatedExistingMessages = [...allExistingMessages];
+
+  for (const newMessage of incomingMessages) {
+    const existingIndex = updatedExistingMessages.findIndex(
+      (msg: ChatMessage) => msg.message_id === newMessage.message_id
+    );
+
+    if (existingIndex !== -1) {
+      updatedExistingMessages[existingIndex] = newMessage;
+    } else {
+      trulyNewMessages.push(newMessage);
+    }
+  }
+
+  const allMessages = [...trulyNewMessages, ...updatedExistingMessages]
+    .sort((a, b) => new Date(b.ingest_timestamp).getTime() - new Date(a.ingest_timestamp).getTime());
+
+  const updatedPages = [];
+  let currentPageMessages = [];
+
+  for (let index = 0; index < allMessages.length; index += 1) {
+    currentPageMessages.push(allMessages[index]);
+
+    if (currentPageMessages.length === PAGE_SIZE || index === allMessages.length - 1) {
+      updatedPages.push({
+        ...(oldData.pages[Math.floor(index / PAGE_SIZE)] || { hasMore: false }),
+        messages: currentPageMessages,
+      });
+      currentPageMessages = [];
+    }
+  }
+
+  return {
+    ...oldData,
+    pages: updatedPages,
+  };
+}
 
 export function useChatMessages({
   channelId,
@@ -76,94 +124,48 @@ export function useChatMessages({
     retry: 1,
   });
 
-  // Auto-refresh query to get newer messages
-  const latestTimestamp = messagesQuery.data?.pages[0]?.messages[0]?.ingest_timestamp;
-  
-  const autoRefreshQuery = useQuery({
-    queryKey: [...baseQueryKey, 'auto-refresh', latestTimestamp],
-    queryFn: async ({ signal }): Promise<ChatMessage[]> => {
-      if (!region || !latestTimestamp) {
-        return [];
-      }
+  const appendStreamMessages = useCallback((incomingMessages: ChatMessage[]) => {
+    queryClient.setQueryData(baseQueryKey, (oldData: any) => mergeNewMessages(oldData, incomingMessages));
+  }, [baseQueryKey, queryClient]);
 
-      let url = `/api/chat?limit=${PAGE_SIZE}&region=${encodeURIComponent(region)}`;
-      if (channelId) {
-        url += `&channel_id=${channelId}`;
-      }
-      url += `&after=${encodeURIComponent(latestTimestamp)}`;
-
-      const response = await fetch(buildApiUrl(url), { signal });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch new chat messages: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      return Array.isArray(data) ? data : [];
-    },
-    enabled: enabled && autoRefreshEnabled && !!region && !!latestTimestamp,
-    refetchInterval: 5000, // 5 seconds
-    staleTime: 0, // Always fresh for auto-refresh
-    retry: 1,
-  });
-
-  // When auto-refresh finds new messages, update the main query
   useEffect(() => {
-    if (autoRefreshQuery.data && autoRefreshQuery.data.length > 0) {
-      queryClient.setQueryData(baseQueryKey, (oldData: any) => {
-        if (!oldData?.pages?.[0]) return oldData;
-        
-        const newMessages = autoRefreshQuery.data;
-        
-        // Get all existing messages from all pages
-        const allExistingMessages = oldData.pages.flatMap((page: any) => page.messages);
-        
-        // Process new messages: replace duplicates and collect truly new ones
-        const trulyNewMessages: ChatMessage[] = [];
-        const updatedExistingMessages = [...allExistingMessages];
-        
-        for (const newMessage of newMessages) {
-          const existingIndex = updatedExistingMessages.findIndex(
-            (msg: ChatMessage) => msg.message_id === newMessage.message_id
-          );
-          
-          if (existingIndex !== -1) {
-            // Replace existing message with the new one
-            updatedExistingMessages[existingIndex] = newMessage;
-          } else {
-            // This is a truly new message
-            trulyNewMessages.push(newMessage);
-          }
-        }
-        
-        // Combine truly new messages with updated existing messages
-        // Sort by ingest_timestamp to maintain order
-        const allMessages = [...trulyNewMessages, ...updatedExistingMessages]
-          .sort((a, b) => new Date(b.ingest_timestamp).getTime() - new Date(a.ingest_timestamp).getTime());
-        
-        // Redistribute messages back into pages
-        const updatedPages = [];
-        let currentPageMessages = [];
-        
-        for (let i = 0; i < allMessages.length; i++) {
-          currentPageMessages.push(allMessages[i]);
-          
-          if (currentPageMessages.length === PAGE_SIZE || i === allMessages.length - 1) {
-            updatedPages.push({
-              ...oldData.pages[Math.floor(i / PAGE_SIZE)] || { hasMore: false },
-              messages: currentPageMessages,
-            });
-            currentPageMessages = [];
-          }
-        }
-        
-        return {
-          ...oldData,
-          pages: updatedPages,
-        };
-      });
+    if (!enabled || !autoRefreshEnabled || !region) {
+      return;
     }
-  }, [autoRefreshQuery.data, queryClient, baseQueryKey]);
+
+    const params = new URLSearchParams({
+      region,
+      pollInterval: '1000',
+      maxRows: String(PAGE_SIZE),
+    });
+    if (channelId) {
+      params.set('channel_id', channelId.toLowerCase());
+    }
+    params.set('skipInitialMessages', 'true');
+
+    const eventSource = new EventSource(buildApiUrl(`/api/meshcore/stream/chat?${params.toString()}`));
+
+    eventSource.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data) as ChatMessage & { type?: string };
+        if (message.type === 'error') {
+          return;
+        }
+
+        appendStreamMessages([message]);
+      } catch (error) {
+        console.error('Failed to process streaming chat message:', error);
+      }
+    };
+
+    eventSource.onerror = () => {
+      // Allow EventSource to reconnect automatically.
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [appendStreamMessages, autoRefreshEnabled, channelId, enabled, region]);
 
   // Flatten all messages from all pages
   const allMessages = messagesQuery.data?.pages.flatMap(page => page.messages) ?? [];
@@ -174,7 +176,7 @@ export function useChatMessages({
   return {
     messages: allMessages,
     loading: messagesQuery.isLoading,
-    error: messagesQuery.error || autoRefreshQuery.error,
+    error: messagesQuery.error,
     hasMore: hasNextPage,
     loadMore: messagesQuery.fetchNextPage,
     isLoadingMore: messagesQuery.isFetchingNextPage,

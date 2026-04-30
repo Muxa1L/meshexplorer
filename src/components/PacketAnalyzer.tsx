@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { buildApiUrl } from "@/lib/api";
 import {
   XMarkIcon,
@@ -41,6 +41,26 @@ interface MeshPacket {
   origin_pubkey: string;
   message_hash: string;
   origin: string;
+}
+
+function getPacketCacheKey(packet: MeshPacket) {
+  return packet.message_hash || `${packet.ingest_timestamp}-${packet.packet}`;
+}
+
+function mergeIncomingPackets(existingPackets: MeshPacket[], incomingPackets: MeshPacket[], limit: number) {
+  const packetMap = new Map<string, MeshPacket>();
+
+  for (const packet of existingPackets) {
+    packetMap.set(getPacketCacheKey(packet), packet);
+  }
+
+  for (const packet of incomingPackets) {
+    packetMap.set(getPacketCacheKey(packet), packet);
+  }
+
+  return Array.from(packetMap.values())
+    .sort((a, b) => new Date(b.ingest_timestamp).getTime() - new Date(a.ingest_timestamp).getTime())
+    .slice(0, limit);
 }
 
 interface PacketGroup {
@@ -505,6 +525,7 @@ function PacketDetail({ packet, onClose }: { packet: MeshPacket; onClose: () => 
 
 export default function PacketAnalyzer() {
   const { t } = useLocale();
+  const queryClient = useQueryClient();
   const [selectedPacket, setSelectedPacket]   = useState<MeshPacket | null>(null);
   const [filterType, setFilterType]           = useState<number | null>(null);
   const [autoRefresh, setAutoRefresh]         = useState(true);
@@ -528,9 +549,51 @@ export default function PacketAnalyzer() {
       if (!res.ok) throw new Error(t("packetAnalyzer.failedToLoadPackets"));
       return res.json() as Promise<{ packets: MeshPacket[] }>;
     },
-    refetchInterval: autoRefresh ? 5000 : false,
     staleTime: 2000,
   });
+
+  useEffect(() => {
+    if (!autoRefresh) {
+      return;
+    }
+
+    const params = new URLSearchParams({
+      pollInterval: '1000',
+      maxRows: '100',
+      skipInitialMessages: 'true',
+    });
+    const eventSource = new EventSource(buildApiUrl(`/api/meshcore/stream/packets?${params.toString()}`));
+
+    eventSource.onmessage = (event) => {
+      try {
+        const packet = JSON.parse(event.data) as MeshPacket & { type?: string };
+        if (packet.type === 'error') {
+          return;
+        }
+
+        queryClient.setQueryData(["packets", limit], (oldData: { packets: MeshPacket[] } | undefined) => {
+          if (!oldData?.packets) {
+            return oldData;
+          }
+
+          return {
+            ...oldData,
+            packets: mergeIncomingPackets(oldData.packets, [packet], limit),
+          };
+        });
+      } catch (error) {
+        console.error('Failed to process streaming packet:', error);
+      }
+    };
+
+    eventSource.onerror = () => {
+      // Allow EventSource to reconnect automatically.
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [autoRefresh, limit, queryClient]);
 
   const packets = useMemo(() => data?.packets ?? [], [data?.packets]);
 

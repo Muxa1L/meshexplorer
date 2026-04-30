@@ -325,6 +325,7 @@ export function createMeshcorePacketsStreamerConfig(
         broker,
         topic,
         hex(packet) AS packet,
+        hex(payload) AS payload,
         path_len,
         hex(path) AS path,
         route_type,
@@ -332,7 +333,8 @@ export function createMeshcorePacketsStreamerConfig(
         payload_version,
         header,
         hex(origin_pubkey) AS origin_pubkey,
-        message_hash
+        message_hash,
+        origin
       FROM meshcore_packets 
       WHERE ingest_timestamp > {lastTimestamp:DateTime64}
       ORDER BY ingest_timestamp DESC
