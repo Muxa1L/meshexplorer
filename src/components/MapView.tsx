@@ -12,7 +12,7 @@ import { useConfig } from "./ConfigContext";
 import RefreshButton from "@/components/RefreshButton";
 import MapLayerSettingsComponent from "@/components/MapLayerSettings";
 import { LIVE_PACKET_TYPE_OPTIONS, type MapLayerSettings, type PacketTypeFilter } from "@/hooks/useMapLayerSettings";
-import { NodeMarker, ClusterMarker, PopupContent, NODE_LEGEND_ITEMS } from "./MapIcons";
+import { NodeMarker, ClusterMarker, PopupContent, NODE_LEGEND_ITEMS, matchesNodeLegendFilter, type NodeLegendFilter } from "./MapIcons";
 import { renderToString } from "react-dom/server";
 import { buildApiUrl } from "@/lib/api";
 import { NodePosition } from "@/types/map";
@@ -1009,6 +1009,9 @@ export default function MapView({ target = '_self' }: MapViewProps = {}) {
   const [allNeighborConnections, setAllNeighborConnections] = useState<AllNeighborsConnection[]>([]);
   const [allNeighborsLoading, setAllNeighborsLoading] = useState<boolean>(false);
   const [isMapLegendOpen, setIsMapLegendOpen] = useState(true);
+  const [activeNodeLegendFilters, setActiveNodeLegendFilters] = useState<NodeLegendFilter[]>(() =>
+    NODE_LEGEND_ITEMS.map((item) => item.key)
+  );
 
   // Update showAllNeighbors when mapLayerSettings changes
   useEffect(() => {
@@ -1028,6 +1031,24 @@ export default function MapView({ target = '_self' }: MapViewProps = {}) {
       };
     });
   }, []);
+
+  const toggleNodeLegendFilter = useCallback((filter: NodeLegendFilter) => {
+    setActiveNodeLegendFilters((currentFilters) => (
+      currentFilters.includes(filter)
+        ? currentFilters.filter((currentFilter) => currentFilter !== filter)
+        : [...currentFilters, filter]
+    ));
+  }, []);
+
+  const visibleNodePositions = useMemo(() => {
+    if (activeNodeLegendFilters.length === 0) {
+      return [];
+    }
+
+    return nodePositions.filter((node) => (
+      activeNodeLegendFilters.some((filter) => matchesNodeLegendFilter(node, filter))
+    ));
+  }, [activeNodeLegendFilters, nodePositions]);
   
   // Use TanStack Query for neighbors data
   const { data: neighbors = [], isLoading: neighborsLoading } = useNeighbors({
@@ -1264,6 +1285,12 @@ export default function MapView({ target = '_self' }: MapViewProps = {}) {
     };
   }, [bounds, mapLayerSettings.nodeTypes, config?.lastSeen, config?.selectedRegion, fetchNodes, showAllNeighbors]);
 
+  useEffect(() => {
+    if (selectedNodeId && !visibleNodePositions.some((node) => node.node_id === selectedNodeId)) {
+      setSelectedNodeId(null);
+    }
+  }, [selectedNodeId, visibleNodePositions]);
+
   return (
     <div style={{ width: "100%", height: "100%", position: "relative" }}>
       {/* Button Column */}
@@ -1313,7 +1340,7 @@ export default function MapView({ target = '_self' }: MapViewProps = {}) {
         )}
         {mapLayerSettings.showNodes && (
           <ClusteredMarkers 
-            nodes={nodePositions} 
+            nodes={visibleNodePositions} 
             selectedNodeId={selectedNodeId}
             onNodeClick={handleNodeClick}
             isLoadingNeighbors={neighborsLoading}
@@ -1360,10 +1387,20 @@ export default function MapView({ target = '_self' }: MapViewProps = {}) {
                     {t("mapSettings.nodeLegend")}
                   </div>
                   {NODE_LEGEND_ITEMS.map((item) => (
-                    <div key={item.labelKey} className="flex items-center gap-2">
+                    <button
+                      key={item.key}
+                      type="button"
+                      onClick={() => toggleNodeLegendFilter(item.key)}
+                      title={t(item.labelKey)}
+                      className={`flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left transition ${
+                        activeNodeLegendFilters.includes(item.key)
+                          ? "bg-slate-900/5 opacity-100 dark:bg-white/10"
+                          : "bg-transparent opacity-65 hover:bg-slate-900/5 dark:hover:bg-white/5"
+                      }`}
+                    >
                       <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
                       <span>{t(item.labelKey)}</span>
-                    </div>
+                    </button>
                   ))}
                 </div>
               )}

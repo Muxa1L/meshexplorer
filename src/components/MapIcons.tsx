@@ -21,12 +21,29 @@ interface PopupContentProps {
   target?: '_blank' | '_self' | '_parent' | '_top';
 }
 
+export type NodeLegendFilter = 'meshtastic' | 'companion' | 'repeater' | 'roomServer';
+
 export const NODE_LEGEND_ITEMS = [
-  { color: "#22c55e", labelKey: "mapSettings.meshtasticNodes" },
-  { color: "#22c55e", labelKey: "advert.companion" },
-  { color: "#2563eb", labelKey: "advert.repeater" },
-  { color: "#dc2626", labelKey: "advert.roomServer" },
+  { key: 'meshtastic', color: "#22c55e", labelKey: "mapSettings.meshtasticNodes" },
+  { key: 'companion', color: "#22c55e", labelKey: "advert.companion" },
+  { key: 'repeater', color: "#2563eb", labelKey: "advert.repeater" },
+  { key: 'roomServer', color: "#dc2626", labelKey: "advert.roomServer" },
 ] as const;
+
+export function matchesNodeLegendFilter(node: NodePosition, filter: NodeLegendFilter) {
+  switch (filter) {
+    case 'meshtastic':
+      return node.type === 'meshtastic';
+    case 'companion':
+      return node.type === 'meshcore' && !!node.is_chat_node;
+    case 'roomServer':
+      return node.type === 'meshcore' && !!node.is_room_server;
+    case 'repeater':
+      return node.type === 'meshcore' && !node.is_chat_node && !node.is_room_server;
+    default:
+      return false;
+  }
+}
 
 function getNodeRoleMeta(node: NodePosition, t?: (key: string) => string) {
   if (node.is_room_server) {
