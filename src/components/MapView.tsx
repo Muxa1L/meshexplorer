@@ -1382,31 +1382,31 @@ export default function MapView({ target = '_self' }: MapViewProps = {}) {
           >
             <div className="flex flex-col gap-1 text-xs font-mono text-gray-700 dark:text-gray-200">
               <div className="flex items-center gap-2">
-                <div style={{ width: '20px', height: '2px', backgroundColor: '#dc2626' }}></div>
+                <div className="h-0.5 w-5 bg-red-600"></div>
                 <span>{t("mapSettings.high")}: {legendThresholds.t4}+ {t("mapSettings.packets")}</span>
               </div>
               <div className="flex items-center gap-2">
-                <div style={{ width: '20px', height: '2px', backgroundColor: '#ea580c' }}></div>
+                <div className="h-0.5 w-5 bg-orange-600"></div>
                 <span>{t("mapSettings.medHigh")}: {legendThresholds.t3}-{legendThresholds.t4 - 1}</span>
               </div>
               <div className="flex items-center gap-2">
-                <div style={{ width: '20px', height: '2px', backgroundColor: '#f59e0b' }}></div>
+                <div className="h-0.5 w-5 bg-amber-500"></div>
                 <span>{t("mapSettings.medium")}: {legendThresholds.t2}-{legendThresholds.t3 - 1}</span>
               </div>
               <div className="flex items-center gap-2">
-                <div style={{ width: '20px', height: '2px', backgroundColor: '#eab308' }}></div>
+                <div className="h-0.5 w-5 bg-yellow-500"></div>
                 <span>{t("mapSettings.lowMed")}: {legendThresholds.t1}-{legendThresholds.t2 - 1}</span>
               </div>
               <div className="flex items-center gap-2">
-                <div style={{ width: '20px', height: '2px', backgroundColor: '#84cc16' }}></div>
+                <div className="h-0.5 w-5 bg-lime-500"></div>
                 <span>{t("mapSettings.low")}: {legendThresholds.min + 1}-{legendThresholds.t1 - 1}</span>
               </div>
               <div className="flex items-center gap-2">
-                <div style={{ width: '20px', height: '2px', backgroundColor: '#6b7280' }}></div>
+                <div className="h-0.5 w-5 bg-gray-500"></div>
                 <span>{t("mapSettings.minimal")}: {legendThresholds.min}</span>
               </div>
               <div className="mt-1 flex items-center gap-2 border-t border-gray-200 pt-1 dark:border-neutral-700">
-                <div style={{ width: '20px', height: '2px', backgroundColor: '#8b5cf6' }}></div>
+                <div className="h-0.5 w-5 bg-violet-500"></div>
                 <span>{t("mapSettings.mqttConnections")}</span>
               </div>
             </div>
@@ -1436,7 +1436,7 @@ export default function MapView({ target = '_self' }: MapViewProps = {}) {
                   className={`flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left text-gray-700 transition-colors dark:text-gray-200 ${
                     isEnabled
                       ? "bg-slate-900/5 opacity-100 dark:bg-white/10"
-                      : "bg-transparent opacity-45 hover:bg-slate-900/5 dark:hover:bg-white/5"
+                      : "bg-transparent opacity-65 hover:bg-slate-900/5 dark:hover:bg-white/5"
                   }`}
                 >
                   <div style={{ position: 'relative', width: '20px', height: '10px' }}>
