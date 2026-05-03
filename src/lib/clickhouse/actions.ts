@@ -2,7 +2,7 @@
 import { clickhouse } from "./clickhouse";
 import { generateRegionWhereClauseFromArray, generateRegionWhereClause, detectRegionFromBrokerTopic, detectRegion } from "@/lib/regionFilters";
 import { getRegionConfig } from "@/lib/regions";
-import { getPathHashSizeBytes, getPubkeyPrefix } from "@/lib/pathUtils";
+import { getPathHashSizeBytes, getPubkeyPrefix, splitPathHex } from "@/lib/pathUtils";
 
 export interface WardriveSample{
   lat: number  | null;
@@ -878,87 +878,70 @@ export async function getAllNodeNeighbors(lastSeen: string | null = null, minLat
 
 export async function getMeshcoreNodeNeighbors(publicKey: string, lastSeen: string | null = null) {
   try {
-    // Build base where conditions for both directions
-    let baseWhereConditions = [];
-    const params: Record<string, any> = { publicKey };
-    
-    // Add lastSeen filter if provided
+    const params: Record<string, any> = {
+      publicKey,
+      prefix1Pattern: `%${getPubkeyPrefix(publicKey, 1)}%`,
+      prefix2Pattern: `%${getPubkeyPrefix(publicKey, 2)}%`,
+      prefix3Pattern: `%${getPubkeyPrefix(publicKey, 3)}%`,
+    };
+
+    const advertsWhereConditions = [
+      `(
+        public_key = {publicKey:String}
+        OR upper(hex(path)) LIKE {prefix1Pattern:String}
+        OR upper(hex(path)) LIKE {prefix2Pattern:String}
+        OR upper(hex(path)) LIKE {prefix3Pattern:String}
+      )`
+    ];
+
     if (lastSeen !== null) {
-      baseWhereConditions.push("ingest_timestamp >= now() - INTERVAL {lastSeen:UInt32} SECOND");
+      advertsWhereConditions.push("ingest_timestamp >= now() - INTERVAL {lastSeen:UInt32} SECOND");
       params.lastSeen = Number(lastSeen);
     }
-    
-    const baseWhere = baseWhereConditions.length > 0 ? `AND ${baseWhereConditions.join(" AND ")}` : '';
-    
-    const neighborsQuery = `
-      WITH neighbor_details AS (
-        -- Get latest attributes for all nodes based on ingest_timestamp
-        SELECT 
-          public_key,
-          argMax(node_name, ingest_timestamp) as node_name,
-          argMax(latitude, ingest_timestamp) as latitude,
-          argMax(longitude, ingest_timestamp) as longitude,
-          argMax(has_location, ingest_timestamp) as has_location,
-          argMax(is_repeater, ingest_timestamp) as is_repeater,
-          argMax(is_chat_node, ingest_timestamp) as is_chat_node,
-          argMax(is_room_server, ingest_timestamp) as is_room_server,
-          argMax(has_name, ingest_timestamp) as has_name
-        FROM meshcore_adverts 
-        GROUP BY public_key
-      ),
-      neighbor_directions AS (
-        -- Direction 1: Adverts heard directly by the queried node
-        -- (hex(origin_pubkey) is the queried node, public_key is the neighbor)
-        SELECT DISTINCT
-          public_key as neighbor_public_key,
-          'incoming' as direction
-        FROM meshcore_adverts 
-        WHERE hex(origin_pubkey) = {publicKey:String}
-          AND path_len = 0
-          AND public_key != {publicKey:String}
-          ${baseWhere}
-        
-        UNION ALL
-        
-        -- Direction 2: Adverts from the queried node heard by other nodes
-        -- (public_key is the queried node, origin_pubkey is the neighbor)
-        SELECT DISTINCT
-          hex(origin_pubkey) as neighbor_public_key,
-          'outgoing' as direction
-        FROM meshcore_adverts 
-        WHERE public_key = {publicKey:String}
-          AND path_len = 0
-          AND hex(origin_pubkey) != {publicKey:String}
-          ${baseWhere}
-      )
-      SELECT 
-        neighbors.neighbor_public_key as public_key,
-        details.node_name,
-        details.latitude,
-        details.longitude,
-        details.has_location,
-        details.is_repeater,
-        details.is_chat_node,
-        details.is_room_server,
-        details.has_name,
-        groupUniqArray(neighbors.direction) as directions
-      FROM neighbor_directions AS neighbors
-      LEFT JOIN neighbor_details AS details ON neighbors.neighbor_public_key = details.public_key
-      WHERE details.public_key IS NOT NULL
-      GROUP BY neighbors.neighbor_public_key, details.node_name, details.latitude, details.longitude, 
-               details.has_location, details.is_repeater, details.is_chat_node, 
-               details.is_room_server, details.has_name
-      ORDER BY neighbors.neighbor_public_key
+
+    const advertHopsQuery = `
+      SELECT
+        public_key,
+        upper(hex(path)) as path,
+        path_len,
+        hex(origin_pubkey) as origin_pubkey
+      FROM meshcore_adverts
+      WHERE ${advertsWhereConditions.join(" AND ")}
     `;
-    
-    const neighborsResult = await clickhouse.query({ 
-      query: neighborsQuery, 
-      query_params: params, 
-      format: 'JSONEachRow' 
-    });
-    const neighbors = await neighborsResult.json();
-    
-    return neighbors as Array<{
+
+    const nodeDetailsQuery = `
+      SELECT
+        public_key,
+        node_name,
+        latitude,
+        longitude,
+        has_location,
+        is_repeater,
+        is_chat_node,
+        is_room_server,
+        has_name
+      FROM meshcore_adverts_latest
+    `;
+
+    const [advertHopsResult, nodeDetailsResult] = await Promise.all([
+      clickhouse.query({
+        query: advertHopsQuery,
+        query_params: params,
+        format: 'JSONEachRow'
+      }),
+      clickhouse.query({
+        query: nodeDetailsQuery,
+        format: 'JSONEachRow'
+      })
+    ]);
+
+    const advertHops = await advertHopsResult.json() as Array<{
+      public_key: string;
+      path: string;
+      path_len: number;
+      origin_pubkey: string;
+    }>;
+    const nodeDetails = await nodeDetailsResult.json() as Array<{
       public_key: string;
       node_name: string;
       latitude: number | null;
@@ -968,8 +951,87 @@ export async function getMeshcoreNodeNeighbors(publicKey: string, lastSeen: stri
       is_chat_node: number;
       is_room_server: number;
       has_name: number;
-      directions: string[];
     }>;
+
+    const detailsByPublicKey = new Map(nodeDetails.map((node) => [node.public_key, node]));
+    const prefixToPublicKeys = new Map<string, string[]>();
+
+    nodeDetails.forEach((node) => {
+      for (const hashSizeBytes of [1, 2, 3]) {
+        const prefix = getPubkeyPrefix(node.public_key, hashSizeBytes);
+        const mapKey = `${hashSizeBytes}:${prefix}`;
+        const existing = prefixToPublicKeys.get(mapKey) ?? [];
+        existing.push(node.public_key);
+        prefixToPublicKeys.set(mapKey, existing);
+      }
+    });
+
+    const neighborKeys = new Set<string>();
+
+    advertHops.forEach((advert) => {
+      const hashSizeBytes = getPathHashSizeBytes(advert.path, advert.path_len);
+      const queryPrefix = getPubkeyPrefix(publicKey, hashSizeBytes);
+      const sourcePrefix = getPubkeyPrefix(advert.public_key, hashSizeBytes);
+      const pathSlices = splitPathHex(advert.path, advert.path_len);
+      const observerPrefix = getPubkeyPrefix(advert.origin_pubkey, hashSizeBytes);
+      const hopPrefixes = [sourcePrefix, ...pathSlices, observerPrefix];
+
+      for (let index = 0; index < hopPrefixes.length - 1; index++) {
+        if (hopPrefixes[index] !== queryPrefix) {
+          continue;
+        }
+
+        const nextPrefix = hopPrefixes[index + 1];
+        let neighborPublicKey: string | null = null;
+
+        if (index + 1 === hopPrefixes.length - 1 && nextPrefix === observerPrefix) {
+          neighborPublicKey = advert.origin_pubkey;
+        } else {
+          const candidates = prefixToPublicKeys.get(`${hashSizeBytes}:${nextPrefix}`) ?? [];
+          if (candidates.length === 1) {
+            neighborPublicKey = candidates[0];
+          }
+        }
+
+        if (neighborPublicKey && neighborPublicKey !== publicKey) {
+          neighborKeys.add(neighborPublicKey);
+        }
+      }
+    });
+
+    return Array.from(neighborKeys)
+      .map((neighborPublicKey) => {
+        const details = detailsByPublicKey.get(neighborPublicKey);
+        if (!details) {
+          return null;
+        }
+
+        return {
+          public_key: neighborPublicKey,
+          node_name: details.node_name,
+          latitude: details.latitude,
+          longitude: details.longitude,
+          has_location: details.has_location,
+          is_repeater: details.is_repeater,
+          is_chat_node: details.is_chat_node,
+          is_room_server: details.is_room_server,
+          has_name: details.has_name,
+          directions: ['outgoing'],
+        };
+      })
+      .filter((neighbor): neighbor is {
+        public_key: string;
+        node_name: string;
+        latitude: number | null;
+        longitude: number | null;
+        has_location: number;
+        is_repeater: number;
+        is_chat_node: number;
+        is_room_server: number;
+        has_name: number;
+        directions: string[];
+      } => neighbor !== null)
+      .sort((left, right) => left.public_key.localeCompare(right.public_key));
   } catch (error) {
     console.error('ClickHouse error in getMeshcoreNodeNeighbors:', error);
     throw error;
