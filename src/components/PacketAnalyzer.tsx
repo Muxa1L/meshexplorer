@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { buildApiUrl } from "@/lib/api";
 import {
   XMarkIcon,
@@ -43,6 +43,12 @@ interface MeshPacket {
   origin: string;
 }
 
+interface PacketPage {
+  packets: MeshPacket[];
+  hasMore: boolean;
+  oldestTimestamp?: string;
+}
+
 function getPacketCacheKey(packet: MeshPacket) {
   return packet.message_hash || `${packet.ingest_timestamp}-${packet.packet}`;
 }
@@ -61,6 +67,43 @@ function mergeIncomingPackets(existingPackets: MeshPacket[], incomingPackets: Me
   return Array.from(packetMap.values())
     .sort((a, b) => new Date(b.ingest_timestamp).getTime() - new Date(a.ingest_timestamp).getTime())
     .slice(0, limit);
+}
+
+function rebuildPacketPages(packets: MeshPacket[], pageSize: number, lastPageHasMore: boolean) {
+  const pages: PacketPage[] = [];
+
+  for (let index = 0; index < packets.length; index += pageSize) {
+    const pagePackets = packets.slice(index, index + pageSize);
+    pages.push({
+      packets: pagePackets,
+      hasMore: false,
+      oldestTimestamp: pagePackets[pagePackets.length - 1]?.ingest_timestamp,
+    });
+  }
+
+  if (pages.length > 0) {
+    pages[pages.length - 1] = {
+      ...pages[pages.length - 1],
+      hasMore: lastPageHasMore,
+    };
+  }
+
+  return pages;
+}
+
+function mergeIncomingPacketPages(oldData: any, incomingPackets: MeshPacket[], pageSize: number) {
+  if (!oldData?.pages?.length || incomingPackets.length === 0) {
+    return oldData;
+  }
+
+  const allExistingPackets = oldData.pages.flatMap((page: PacketPage) => page.packets);
+  const mergedPackets = mergeIncomingPackets(allExistingPackets, incomingPackets, Number.MAX_SAFE_INTEGER);
+  const lastPageHasMore = oldData.pages[oldData.pages.length - 1]?.hasMore ?? false;
+
+  return {
+    ...oldData,
+    pages: rebuildPacketPages(mergedPackets, pageSize, lastPageHasMore),
+  };
 }
 
 interface PacketGroup {
@@ -96,6 +139,9 @@ const ROUTE_TYPES: Record<number, string> = {
   2: "DIRECT",
   3: "TRANSPORT_DIRECT",
 };
+
+const PACKET_PAGE_SIZE = 100;
+const PACKET_LOAD_MORE_THRESHOLD_PX = 640;
 
 function getPayloadType(pt: number) {
   return PAYLOAD_TYPES[pt] ?? { name: `0x${pt.toString(16).toUpperCase()}`, color: "bg-gray-500" };
@@ -526,12 +572,12 @@ function PacketDetail({ packet, onClose }: { packet: MeshPacket; onClose: () => 
 export default function PacketAnalyzer() {
   const { t } = useLocale();
   const queryClient = useQueryClient();
+  const packetListRef = useRef<HTMLDivElement>(null);
   const [selectedPacket, setSelectedPacket]   = useState<MeshPacket | null>(null);
   const [filterType, setFilterType]           = useState<number | null>(null);
   const [autoRefresh, setAutoRefresh]         = useState(true);
   const [groupMode, setGroupMode]             = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
-  const [limit]                               = useState(1000);
 
   const toggleGroup = useCallback((key: string) => {
     setCollapsedGroups(prev => {
@@ -541,16 +587,48 @@ export default function PacketAnalyzer() {
     });
   }, []);
 
-  const { data, isLoading, error, refetch, isFetching } = useQuery({
-    queryKey: ["packets", limit],
-    queryFn: async ({ signal }) => {
-      const params = new URLSearchParams({ limit: String(limit) });
+  const packetsQueryKey = useMemo(
+    () => ["packets", filterType] as const,
+    [filterType],
+  );
+
+  const { data, isLoading, error, refetch, isFetching, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
+    queryKey: packetsQueryKey,
+    queryFn: async ({ pageParam, signal }) => {
+      const params = new URLSearchParams({ limit: String(PACKET_PAGE_SIZE) });
+      if (filterType !== null) {
+        params.set('payloadType', String(filterType));
+      }
+      if (pageParam) {
+        params.set('before', pageParam);
+      }
       const res = await fetch(buildApiUrl(`/api/packets?${params}`), { signal });
       if (!res.ok) throw new Error(t("packetAnalyzer.failedToLoadPackets"));
-      return res.json() as Promise<{ packets: MeshPacket[] }>;
+      const response = await res.json() as { packets: MeshPacket[] };
+      const packets = Array.isArray(response.packets) ? response.packets : [];
+
+      return {
+        packets,
+        hasMore: packets.length === PACKET_PAGE_SIZE,
+        oldestTimestamp: packets[packets.length - 1]?.ingest_timestamp,
+      } satisfies PacketPage;
     },
+    getNextPageParam: (lastPage) => lastPage.hasMore ? lastPage.oldestTimestamp : undefined,
+    initialPageParam: undefined as string | undefined,
     staleTime: 2000,
   });
+
+  const handleListScroll = useCallback(() => {
+    const container = packetListRef.current;
+    if (!container || !hasNextPage || isFetchingNextPage || isLoading) {
+      return;
+    }
+
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    if (distanceFromBottom <= PACKET_LOAD_MORE_THRESHOLD_PX) {
+      fetchNextPage();
+    }
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage, isLoading]);
 
   useEffect(() => {
     if (!autoRefresh) {
@@ -559,9 +637,12 @@ export default function PacketAnalyzer() {
 
     const params = new URLSearchParams({
       pollInterval: '1000',
-      maxRows: '100',
+      maxRows: String(PACKET_PAGE_SIZE),
       skipInitialMessages: 'true',
     });
+    if (filterType !== null) {
+      params.set('payloadType', String(filterType));
+    }
     const eventSource = new EventSource(buildApiUrl(`/api/meshcore/stream/packets?${params.toString()}`));
 
     eventSource.onmessage = (event) => {
@@ -571,16 +652,7 @@ export default function PacketAnalyzer() {
           return;
         }
 
-        queryClient.setQueryData(["packets", limit], (oldData: { packets: MeshPacket[] } | undefined) => {
-          if (!oldData?.packets) {
-            return oldData;
-          }
-
-          return {
-            ...oldData,
-            packets: mergeIncomingPackets(oldData.packets, [packet], limit),
-          };
-        });
+        queryClient.setQueryData(packetsQueryKey, (oldData: any) => mergeIncomingPacketPages(oldData, [packet], PACKET_PAGE_SIZE));
       } catch (error) {
         console.error('Failed to process streaming packet:', error);
       }
@@ -593,9 +665,25 @@ export default function PacketAnalyzer() {
     return () => {
       eventSource.close();
     };
-  }, [autoRefresh, limit, queryClient]);
+  }, [autoRefresh, filterType, packetsQueryKey, queryClient]);
 
-  const packets = useMemo(() => data?.packets ?? [], [data?.packets]);
+  const packets = useMemo(() => data?.pages.flatMap((page) => page.packets) ?? [], [data?.pages]);
+
+  useEffect(() => {
+    if (!selectedPacket) {
+      return;
+    }
+
+    const updatedSelection = packets.find((packet) => getPacketCacheKey(packet) === getPacketCacheKey(selectedPacket));
+    if (!updatedSelection) {
+      setSelectedPacket(null);
+      return;
+    }
+
+    if (updatedSelection !== selectedPacket) {
+      setSelectedPacket(updatedSelection);
+    }
+  }, [packets, selectedPacket]);
 
   const stats = useMemo(() => {
     const counts: Record<number, number> = {};
@@ -603,20 +691,15 @@ export default function PacketAnalyzer() {
     return counts;
   }, [packets]);
 
-  const filteredPackets = useMemo(
-    () => filterType === null ? packets : packets.filter(p => p.payload_type === filterType),
-    [packets, filterType],
-  );
-
   const typeButtons = useMemo(
-    () => Array.from(new Set(packets.map(p => p.payload_type))).sort((a, b) => a - b),
-    [packets],
+    () => Object.keys(PAYLOAD_TYPES).map(Number).sort((a, b) => a - b),
+    [],
   );
 
   const groups = useMemo<PacketGroup[]>(() => {
     const groupMap = new Map<string, PacketGroup>();
     const order: string[] = [];
-    for (const packet of filteredPackets) {
+    for (const packet of packets) {
       let decoded: DecodedPayload;
       try { decoded = decodePacket(packet.packet); } catch { decoded = { type: "UNKNOWN", data: "" }; }
       const { key, label } = packetGroupKey(decoded);
@@ -627,7 +710,7 @@ export default function PacketAnalyzer() {
       groupMap.get(key)!.packets.push(packet);
     }
     return order.map(k => groupMap.get(k)!);
-  }, [filteredPackets]);
+  }, [packets]);
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-neutral-900">
@@ -643,7 +726,7 @@ export default function PacketAnalyzer() {
                 : "bg-gray-100 dark:bg-neutral-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-neutral-700"
             }`}
           >
-            {t("packetAnalyzer.all")} ({packets.length})
+            {t("packetAnalyzer.all")}
           </button>
           {typeButtons.map(pt => {
             const info = getPayloadType(pt);
@@ -657,7 +740,7 @@ export default function PacketAnalyzer() {
                     : "bg-gray-100 dark:bg-neutral-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-neutral-700"
                 }`}
               >
-                {info.name} ({stats[pt] || 0})
+                {info.name}
               </button>
             );
           })}
@@ -707,15 +790,16 @@ export default function PacketAnalyzer() {
             <span className="w-14 flex-shrink-0 text-center">{t("packetAnalyzer.hops")}</span>
             <span className="flex-1">{t("packetAnalyzer.preview")}</span>
           </div>
-          <div className="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-neutral-800">
+          <div ref={packetListRef} onScroll={handleListScroll} className="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-neutral-800">
             {isLoading ? (
               <div className="flex items-center justify-center h-24 text-sm text-gray-500 dark:text-gray-400">{t("packetAnalyzer.loadingPackets")}</div>
             ) : error ? (
               <div className="flex items-center justify-center h-24 text-sm text-red-500 dark:text-red-400">{t("packetAnalyzer.failedToLoadPackets")}</div>
-            ) : filteredPackets.length === 0 ? (
+            ) : packets.length === 0 ? (
               <div className="flex items-center justify-center h-24 text-sm text-gray-500 dark:text-gray-400">{t("packetAnalyzer.noPacketsFound")}</div>
             ) : groupMode ? (
-              groups.map(group => (
+              <>
+                {groups.map(group => (
                 <div key={group.key}>
                   <GroupHeader
                     group={group}
@@ -731,16 +815,25 @@ export default function PacketAnalyzer() {
                     />
                   ))}
                 </div>
-              ))
+                ))}
+                {isFetchingNextPage && (
+                  <div className="flex items-center justify-center h-16 text-sm text-gray-500 dark:text-gray-400">{t("packetAnalyzer.loadingPackets")}</div>
+                )}
+              </>
             ) : (
-              filteredPackets.map((p, idx) => (
+              <>
+                {packets.map((p, idx) => (
                 <PacketRow
                   key={`${p.ingest_timestamp}-${p.message_hash || idx}`}
                   packet={p}
                   isSelected={selectedPacket === p}
                   onClick={() => setSelectedPacket(prev => prev === p ? null : p)}
                 />
-              ))
+                ))}
+                {isFetchingNextPage && (
+                  <div className="flex items-center justify-center h-16 text-sm text-gray-500 dark:text-gray-400">{t("packetAnalyzer.loadingPackets")}</div>
+                )}
+              </>
             )}
           </div>
         </div>
