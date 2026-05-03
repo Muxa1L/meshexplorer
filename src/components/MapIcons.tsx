@@ -21,6 +21,13 @@ interface PopupContentProps {
   target?: '_blank' | '_self' | '_parent' | '_top';
 }
 
+export const NODE_LEGEND_ITEMS = [
+  { color: "#22c55e", labelKey: "mapSettings.meshtasticNodes" },
+  { color: "#22c55e", labelKey: "advert.companion" },
+  { color: "#2563eb", labelKey: "advert.repeater" },
+  { color: "#dc2626", labelKey: "advert.roomServer" },
+] as const;
+
 function getNodeRoleMeta(node: NodePosition, t?: (key: string) => string) {
   if (node.is_room_server) {
     return {
@@ -86,9 +93,6 @@ export function NodeMarker({ node, showNodeNames = true, isSelected = false, isL
     <div className="custom-node-marker-container" style={containerStyle}>
       {showNodeNames && node.short_name && (
         <div className={`custom-node-label ${node.type === "meshcore" ? roleMeta.labelClassName : ""}`}>
-          {node.type === "meshcore" && (
-            <span className="custom-node-label__role-dot" style={{ backgroundColor: roleMeta.color }} />
-          )}
           {node.type === "meshcore" ? getNameIconLabel(node.name || node.short_name) : node.short_name}
         </div>
       )}

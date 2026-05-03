@@ -231,14 +231,6 @@ html {
   z-index: 1;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-}
-
-.custom-node-label__role-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  flex: 0 0 auto;
 }
 
 .custom-node-label--blue {

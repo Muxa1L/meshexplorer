@@ -12,7 +12,7 @@ import { useConfig } from "./ConfigContext";
 import RefreshButton from "@/components/RefreshButton";
 import MapLayerSettingsComponent from "@/components/MapLayerSettings";
 import { LIVE_PACKET_TYPE_OPTIONS, type MapLayerSettings, type PacketTypeFilter } from "@/hooks/useMapLayerSettings";
-import { NodeMarker, ClusterMarker, PopupContent } from "./MapIcons";
+import { NodeMarker, ClusterMarker, PopupContent, NODE_LEGEND_ITEMS } from "./MapIcons";
 import { renderToString } from "react-dom/server";
 import { buildApiUrl } from "@/lib/api";
 import { NodePosition } from "@/types/map";
@@ -1008,6 +1008,7 @@ export default function MapView({ target = '_self' }: MapViewProps = {}) {
   const [showAllNeighbors, setShowAllNeighbors] = useState<boolean>(false);
   const [allNeighborConnections, setAllNeighborConnections] = useState<AllNeighborsConnection[]>([]);
   const [allNeighborsLoading, setAllNeighborsLoading] = useState<boolean>(false);
+  const [isNodeLegendOpen, setIsNodeLegendOpen] = useState(true);
   const [isPathTrafficLegendOpen, setIsPathTrafficLegendOpen] = useState(true);
   const [isLivePacketLegendOpen, setIsLivePacketLegendOpen] = useState(true);
 
@@ -1344,8 +1345,28 @@ export default function MapView({ target = '_self' }: MapViewProps = {}) {
         )}
       </MapContainer>
       
-      {(mapLayerSettings.showLivePacketPropagation || (showAllNeighbors && mapLayerSettings.useColors && allNeighborConnections.length > 0)) && (
+      {(mapLayerSettings.showNodes || mapLayerSettings.showLivePacketPropagation || (showAllNeighbors && mapLayerSettings.useColors && allNeighborConnections.length > 0)) && (
         <div className="pointer-events-none absolute bottom-4 right-4 z-[1000] flex max-w-[calc(100%-2rem)] flex-col-reverse items-end gap-3">
+          {mapLayerSettings.showNodes && (
+            <MapLegendPanel
+              title={t("mapSettings.nodeLegend")}
+              className="pointer-events-auto min-w-[190px] max-w-[min(24rem,calc(100vw-2rem))]"
+              isOpen={isNodeLegendOpen}
+              onToggle={() => setIsNodeLegendOpen((current) => !current)}
+              showLabel={t("mapSettings.showLegend")}
+              hideLabel={t("mapSettings.hideLegend")}
+            >
+              <div className="flex flex-col gap-1.5 text-xs font-mono text-gray-700 dark:text-gray-200">
+                {NODE_LEGEND_ITEMS.map((item) => (
+                  <div key={item.labelKey} className="flex items-center gap-2">
+                    <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                    <span>{t(item.labelKey)}</span>
+                  </div>
+                ))}
+              </div>
+            </MapLegendPanel>
+          )}
+
           {/* Traffic Legend */}
           {showAllNeighbors && mapLayerSettings.useColors && allNeighborConnections.length > 0 && (() => {
             // Calculate logarithmic thresholds for legend display
