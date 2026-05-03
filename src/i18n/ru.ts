@@ -255,6 +255,8 @@ export const ruMessages = {
     mediumResolution: "средне",
     fine: "точно",
     veryFine: "очень точно",
+    showLegend: "Показать легенду",
+    hideLegend: "Скрыть легенду",
   },
   mapPopup: {
     id: "ID",

@@ -255,6 +255,8 @@ export const enMessages = {
     mediumResolution: "medium",
     fine: "fine",
     veryFine: "very fine",
+    showLegend: "Show legend",
+    hideLegend: "Hide legend",
   },
   mapPopup: {
     id: "ID",
