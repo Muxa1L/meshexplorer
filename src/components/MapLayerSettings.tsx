@@ -69,7 +69,7 @@ export default function MapLayerSettingsComponent({ onSettingsChange }: MapLayer
       {isOpen && (
         <div
           ref={popoverRef}
-          className="absolute top-full right-0 mt-2 bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-700 rounded-lg shadow-lg p-4 min-w-[250px] z-[1100]"
+          className="absolute top-full right-0 z-[1100] mt-2 max-h-[min(70vh,32rem)] w-[min(20rem,calc(100vw-1rem))] overflow-y-auto rounded-lg border border-gray-200 bg-white p-4 shadow-lg dark:border-neutral-700 dark:bg-neutral-900"
           style={{ boxSizing: 'border-box' }}
         >
           <h3 className="text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">{t("mapSettings.title")}</h3>
