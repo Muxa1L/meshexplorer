@@ -922,7 +922,7 @@ function MapLegendPanel({
   hideLabel: string;
   children: React.ReactNode;
 }) {
-  const ToggleIcon = isOpen ? ChevronDownIcon : ChevronUpIcon;
+  const ToggleIcon = isOpen ? ChevronUpIcon : ChevronDownIcon;
 
   return (
     <div
