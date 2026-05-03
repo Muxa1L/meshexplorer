@@ -7,6 +7,7 @@ import L from "leaflet";
 import 'leaflet.markercluster/dist/leaflet.markercluster.js';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
+import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
 import { useConfig } from "./ConfigContext";
 import RefreshButton from "@/components/RefreshButton";
 import MapLayerSettingsComponent from "@/components/MapLayerSettings";
@@ -904,6 +905,45 @@ function MapViewSync({ center, zoom }: { center: [number, number]; zoom: number 
   return null;
 }
 
+function MapLegendPanel({
+  title,
+  className,
+  isOpen,
+  onToggle,
+  showLabel,
+  hideLabel,
+  children,
+}: {
+  title: string;
+  className: string;
+  isOpen: boolean;
+  onToggle: () => void;
+  showLabel: string;
+  hideLabel: string;
+  children: React.ReactNode;
+}) {
+  const ToggleIcon = isOpen ? ChevronDownIcon : ChevronUpIcon;
+
+  return (
+    <div
+      className={`${className} z-[1000] rounded-lg border border-gray-200 bg-white/90 text-gray-900 shadow-lg backdrop-blur-sm dark:border-neutral-700 dark:bg-neutral-900/90 dark:text-gray-100`}
+    >
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-xs font-semibold"
+      >
+        <span>{title}</span>
+        <span className="flex items-center gap-1 text-[11px] font-medium text-gray-500 dark:text-gray-400">
+          {isOpen ? hideLabel : showLabel}
+          <ToggleIcon className="h-3.5 w-3.5" />
+        </span>
+      </button>
+      {isOpen && <div className="border-t border-gray-200 px-3 pb-3 pt-2 dark:border-neutral-700">{children}</div>}
+    </div>
+  );
+}
+
 interface MapViewProps {
   target?: '_blank' | '_self' | '_parent' | '_top';
 }
@@ -968,6 +1008,8 @@ export default function MapView({ target = '_self' }: MapViewProps = {}) {
   const [showAllNeighbors, setShowAllNeighbors] = useState<boolean>(false);
   const [allNeighborConnections, setAllNeighborConnections] = useState<AllNeighborsConnection[]>([]);
   const [allNeighborsLoading, setAllNeighborsLoading] = useState<boolean>(false);
+  const [isPathTrafficLegendOpen, setIsPathTrafficLegendOpen] = useState(true);
+  const [isLivePacketLegendOpen, setIsLivePacketLegendOpen] = useState(true);
 
   // Update showAllNeighbors when mapLayerSettings changes
   useEffect(() => {
@@ -1330,73 +1372,58 @@ export default function MapView({ target = '_self' }: MapViewProps = {}) {
         })() : null;
 
         return legendThresholds && (
-          <div style={{ 
-            position: "absolute", 
-            bottom: 16, 
-            left: 16, 
-            zIndex: 1000, 
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            padding: '12px',
-            borderRadius: '8px',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-            fontSize: '12px',
-            fontFamily: 'monospace'
-          }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>
-              {t("mapSettings.pathTraffic")}
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <MapLegendPanel
+            title={t("mapSettings.pathTraffic")}
+            className="absolute bottom-4 left-4"
+            isOpen={isPathTrafficLegendOpen}
+            onToggle={() => setIsPathTrafficLegendOpen((current) => !current)}
+            showLabel={t("mapSettings.showLegend")}
+            hideLabel={t("mapSettings.hideLegend")}
+          >
+            <div className="flex flex-col gap-1 text-xs font-mono text-gray-700 dark:text-gray-200">
+              <div className="flex items-center gap-2">
                 <div style={{ width: '20px', height: '2px', backgroundColor: '#dc2626' }}></div>
                 <span>{t("mapSettings.high")}: {legendThresholds.t4}+ {t("mapSettings.packets")}</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div className="flex items-center gap-2">
                 <div style={{ width: '20px', height: '2px', backgroundColor: '#ea580c' }}></div>
                 <span>{t("mapSettings.medHigh")}: {legendThresholds.t3}-{legendThresholds.t4 - 1}</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div className="flex items-center gap-2">
                 <div style={{ width: '20px', height: '2px', backgroundColor: '#f59e0b' }}></div>
                 <span>{t("mapSettings.medium")}: {legendThresholds.t2}-{legendThresholds.t3 - 1}</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div className="flex items-center gap-2">
                 <div style={{ width: '20px', height: '2px', backgroundColor: '#eab308' }}></div>
                 <span>{t("mapSettings.lowMed")}: {legendThresholds.t1}-{legendThresholds.t2 - 1}</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div className="flex items-center gap-2">
                 <div style={{ width: '20px', height: '2px', backgroundColor: '#84cc16' }}></div>
                 <span>{t("mapSettings.low")}: {legendThresholds.min + 1}-{legendThresholds.t1 - 1}</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div className="flex items-center gap-2">
                 <div style={{ width: '20px', height: '2px', backgroundColor: '#6b7280' }}></div>
                 <span>{t("mapSettings.minimal")}: {legendThresholds.min}</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px', paddingTop: '4px', borderTop: '1px solid #e5e7eb' }}>
+              <div className="mt-1 flex items-center gap-2 border-t border-gray-200 pt-1 dark:border-neutral-700">
                 <div style={{ width: '20px', height: '2px', backgroundColor: '#8b5cf6' }}></div>
                 <span>{t("mapSettings.mqttConnections")}</span>
               </div>
             </div>
-          </div>
+          </MapLegendPanel>
         );
       })()}
 
       {mapLayerSettings.showLivePacketPropagation && (
-        <div style={{
-          position: "absolute",
-          top: 84,
-          left: 16,
-          zIndex: 1000,
-          backgroundColor: 'rgba(255, 255, 255, 0.9)',
-          padding: '12px',
-          borderRadius: '8px',
-          boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-          fontSize: '12px',
-          fontFamily: 'monospace',
-          minWidth: '190px',
-        }}>
-          <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>
-            {t("mapSettings.packetLegend")}
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+        <MapLegendPanel
+          title={t("mapSettings.packetLegend")}
+          className="absolute left-4 top-[84px] min-w-[190px]"
+          isOpen={isLivePacketLegendOpen}
+          onToggle={() => setIsLivePacketLegendOpen((current) => !current)}
+          showLabel={t("mapSettings.showLegend")}
+          hideLabel={t("mapSettings.hideLegend")}
+        >
+          <div className="flex flex-col gap-[5px] text-xs font-mono">
             {LIVE_PACKET_TYPE_OPTIONS.map((packetType) => {
               const isEnabled = mapLayerSettings.livePacketTypes.includes(packetType.key);
 
@@ -1406,20 +1433,11 @@ export default function MapView({ target = '_self' }: MapViewProps = {}) {
                   type="button"
                   onClick={() => toggleLivePacketType(packetType.key)}
                   title={t(packetType.labelKey)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    width: '100%',
-                    border: 'none',
-                    background: isEnabled ? 'rgba(15, 23, 42, 0.05)' : 'transparent',
-                    borderRadius: '6px',
-                    padding: '4px 6px',
-                    cursor: 'pointer',
-                    opacity: isEnabled ? 1 : 0.45,
-                    textAlign: 'left',
-                    transition: 'background-color 120ms ease, opacity 120ms ease',
-                  }}
+                  className={`flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left text-gray-700 transition-colors dark:text-gray-200 ${
+                    isEnabled
+                      ? "bg-slate-900/5 opacity-100 dark:bg-white/10"
+                      : "bg-transparent opacity-45 hover:bg-slate-900/5 dark:hover:bg-white/5"
+                  }`}
                 >
                   <div style={{ position: 'relative', width: '20px', height: '10px' }}>
                     <div
@@ -1467,7 +1485,7 @@ export default function MapView({ target = '_self' }: MapViewProps = {}) {
               );
             })}
           </div>
-        </div>
+        </MapLegendPanel>
       )}
     </div>
   );
