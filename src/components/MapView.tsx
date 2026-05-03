@@ -1008,9 +1008,7 @@ export default function MapView({ target = '_self' }: MapViewProps = {}) {
   const [showAllNeighbors, setShowAllNeighbors] = useState<boolean>(false);
   const [allNeighborConnections, setAllNeighborConnections] = useState<AllNeighborsConnection[]>([]);
   const [allNeighborsLoading, setAllNeighborsLoading] = useState<boolean>(false);
-  const [isNodeLegendOpen, setIsNodeLegendOpen] = useState(true);
-  const [isPathTrafficLegendOpen, setIsPathTrafficLegendOpen] = useState(true);
-  const [isLivePacketLegendOpen, setIsLivePacketLegendOpen] = useState(true);
+  const [isMapLegendOpen, setIsMapLegendOpen] = useState(true);
 
   // Update showAllNeighbors when mapLayerSettings changes
   useEffect(() => {
@@ -1346,170 +1344,161 @@ export default function MapView({ target = '_self' }: MapViewProps = {}) {
       </MapContainer>
       
       {(mapLayerSettings.showNodes || mapLayerSettings.showLivePacketPropagation || (showAllNeighbors && mapLayerSettings.useColors && allNeighborConnections.length > 0)) && (
-        <div className="pointer-events-none absolute bottom-4 right-4 z-[1000] flex max-w-[calc(100%-2rem)] flex-col-reverse items-end gap-3">
-          {mapLayerSettings.showNodes && (
-            <MapLegendPanel
-              title={t("mapSettings.nodeLegend")}
-              className="pointer-events-auto min-w-[190px] max-w-[min(24rem,calc(100vw-2rem))]"
-              isOpen={isNodeLegendOpen}
-              onToggle={() => setIsNodeLegendOpen((current) => !current)}
-              showLabel={t("mapSettings.showLegend")}
-              hideLabel={t("mapSettings.hideLegend")}
-            >
-              <div className="flex flex-col gap-1.5 text-xs font-mono text-gray-700 dark:text-gray-200">
-                {NODE_LEGEND_ITEMS.map((item) => (
-                  <div key={item.labelKey} className="flex items-center gap-2">
-                    <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                    <span>{t(item.labelKey)}</span>
+        <div className="pointer-events-none absolute bottom-4 right-4 z-[1000] max-w-[calc(100%-2rem)]">
+          <MapLegendPanel
+            title={t("mapSettings.mapLegend")}
+            className="pointer-events-auto min-w-[190px] max-w-[min(24rem,calc(100vw-2rem))]"
+            isOpen={isMapLegendOpen}
+            onToggle={() => setIsMapLegendOpen((current) => !current)}
+            showLabel={t("mapSettings.showLegend")}
+            hideLabel={t("mapSettings.hideLegend")}
+          >
+            <div className="flex flex-col gap-3 text-xs font-mono text-gray-700 dark:text-gray-200">
+              {mapLayerSettings.showNodes && (
+                <div className="flex flex-col gap-1.5">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    {t("mapSettings.nodeLegend")}
                   </div>
-                ))}
-              </div>
-            </MapLegendPanel>
-          )}
-
-          {/* Traffic Legend */}
-          {showAllNeighbors && mapLayerSettings.useColors && allNeighborConnections.length > 0 && (() => {
-            // Calculate logarithmic thresholds for legend display
-            const pathConnections = allNeighborConnections.filter(conn => conn.connection_type === 'path');
-            const packetCounts = pathConnections.map(conn => conn.packet_count).sort((a, b) => a - b);
-            const legendThresholds = packetCounts.length > 0 ? (() => {
-              const min = Math.max(1, packetCounts[0]);
-              const max = packetCounts[packetCounts.length - 1];
-
-              if (min === max) {
-                return { min, t1: min, t2: min, t3: min, t4: min, max };
-              }
-
-              const logMin = Math.log10(min);
-              const logMax = Math.log10(max);
-              const logRange = logMax - logMin;
-
-              return {
-                min,
-                t1: Math.round(Math.pow(10, logMin + logRange * 0.2)),
-                t2: Math.round(Math.pow(10, logMin + logRange * 0.4)),
-                t3: Math.round(Math.pow(10, logMin + logRange * 0.6)),
-                t4: Math.round(Math.pow(10, logMin + logRange * 0.8)),
-                max
-              };
-            })() : null;
-
-            return legendThresholds && (
-              <MapLegendPanel
-                title={t("mapSettings.pathTraffic")}
-                className="pointer-events-auto w-full max-w-[min(24rem,calc(100vw-2rem))]"
-                isOpen={isPathTrafficLegendOpen}
-                onToggle={() => setIsPathTrafficLegendOpen((current) => !current)}
-                showLabel={t("mapSettings.showLegend")}
-                hideLabel={t("mapSettings.hideLegend")}
-              >
-                <div className="flex flex-col gap-1 text-xs font-mono text-gray-700 dark:text-gray-200">
-                  <div className="flex items-center gap-2">
-                    <div className="h-0.5 w-5 bg-red-600"></div>
-                    <span>{t("mapSettings.high")}: {legendThresholds.t4}+ {t("mapSettings.packets")}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-0.5 w-5 bg-orange-600"></div>
-                    <span>{t("mapSettings.medHigh")}: {legendThresholds.t3}-{legendThresholds.t4 - 1}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-0.5 w-5 bg-amber-500"></div>
-                    <span>{t("mapSettings.medium")}: {legendThresholds.t2}-{legendThresholds.t3 - 1}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-0.5 w-5 bg-yellow-500"></div>
-                    <span>{t("mapSettings.lowMed")}: {legendThresholds.t1}-{legendThresholds.t2 - 1}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-0.5 w-5 bg-lime-500"></div>
-                    <span>{t("mapSettings.low")}: {legendThresholds.min + 1}-{legendThresholds.t1 - 1}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-0.5 w-5 bg-gray-500"></div>
-                    <span>{t("mapSettings.minimal")}: {legendThresholds.min}</span>
-                  </div>
-                  <div className="mt-1 flex items-center gap-2 border-t border-gray-200 pt-1 dark:border-neutral-700">
-                    <div className="h-0.5 w-5 bg-violet-500"></div>
-                    <span>{t("mapSettings.mqttConnections")}</span>
-                  </div>
+                  {NODE_LEGEND_ITEMS.map((item) => (
+                    <div key={item.labelKey} className="flex items-center gap-2">
+                      <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                      <span>{t(item.labelKey)}</span>
+                    </div>
+                  ))}
                 </div>
-              </MapLegendPanel>
-            );
-          })()}
+              )}
 
-          {mapLayerSettings.showLivePacketPropagation && (
-            <MapLegendPanel
-              title={t("mapSettings.packetLegend")}
-              className="pointer-events-auto min-w-[190px] max-w-[min(24rem,calc(100vw-2rem))]"
-              isOpen={isLivePacketLegendOpen}
-              onToggle={() => setIsLivePacketLegendOpen((current) => !current)}
-              showLabel={t("mapSettings.showLegend")}
-              hideLabel={t("mapSettings.hideLegend")}
-            >
-              <div className="flex flex-col gap-[5px] text-xs font-mono">
-                {LIVE_PACKET_TYPE_OPTIONS.map((packetType) => {
-                  const isEnabled = mapLayerSettings.livePacketTypes.includes(packetType.key);
+              {showAllNeighbors && mapLayerSettings.useColors && allNeighborConnections.length > 0 && (() => {
+                const pathConnections = allNeighborConnections.filter(conn => conn.connection_type === 'path');
+                const packetCounts = pathConnections.map(conn => conn.packet_count).sort((a, b) => a - b);
+                const legendThresholds = packetCounts.length > 0 ? (() => {
+                  const min = Math.max(1, packetCounts[0]);
+                  const max = packetCounts[packetCounts.length - 1];
 
-                  return (
-                    <button
-                      key={packetType.key}
-                      type="button"
-                      onClick={() => toggleLivePacketType(packetType.key)}
-                      title={t(packetType.labelKey)}
-                      className={`flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left text-gray-700 transition dark:text-gray-200 ${
-                        isEnabled
-                          ? "bg-slate-900/5 opacity-100 dark:bg-white/10"
-                          : "bg-transparent opacity-65 hover:bg-slate-900/5 dark:hover:bg-white/5"
-                      }`}
-                    >
-                      <div className="relative h-[10px] w-5">
-                        <div
-                          style={{
-                            position: 'absolute',
-                            left: 0,
-                            right: 0,
-                            top: '50%',
-                            height: '6px',
-                            transform: 'translateY(-50%)',
-                            borderRadius: '999px',
-                            backgroundColor: packetType.color,
-                            opacity: isEnabled ? 0.2 : 0.1,
-                          }}
-                        />
-                        <div
-                          style={{
-                            position: 'absolute',
-                            left: 0,
-                            right: 0,
-                            top: '50%',
-                            height: '2px',
-                            transform: 'translateY(-50%)',
-                            borderRadius: '999px',
-                            backgroundColor: packetType.color,
-                            opacity: isEnabled ? 0.8 : 0.45,
-                          }}
-                        />
-                        <div
-                          style={{
-                            position: 'absolute',
-                            right: 0,
-                            top: '50%',
-                            width: '8px',
-                            height: '8px',
-                            transform: 'translateY(-50%)',
-                            borderRadius: '999px',
-                            backgroundColor: packetType.color,
-                            boxShadow: isEnabled ? `0 0 8px ${packetType.color}` : 'none',
-                          }}
-                        />
-                      </div>
-                      <span>{t(packetType.labelKey)}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </MapLegendPanel>
-          )}
+                  if (min === max) {
+                    return { min, t1: min, t2: min, t3: min, t4: min, max };
+                  }
+
+                  const logMin = Math.log10(min);
+                  const logMax = Math.log10(max);
+                  const logRange = logMax - logMin;
+
+                  return {
+                    min,
+                    t1: Math.round(Math.pow(10, logMin + logRange * 0.2)),
+                    t2: Math.round(Math.pow(10, logMin + logRange * 0.4)),
+                    t3: Math.round(Math.pow(10, logMin + logRange * 0.6)),
+                    t4: Math.round(Math.pow(10, logMin + logRange * 0.8)),
+                    max
+                  };
+                })() : null;
+
+                return legendThresholds ? (
+                  <div className="flex flex-col gap-1 border-t border-gray-200 pt-3 dark:border-neutral-700">
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      {t("mapSettings.pathTraffic")}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-0.5 w-5 bg-red-600"></div>
+                      <span>{t("mapSettings.high")}: {legendThresholds.t4}+ {t("mapSettings.packets")}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-0.5 w-5 bg-orange-600"></div>
+                      <span>{t("mapSettings.medHigh")}: {legendThresholds.t3}-{legendThresholds.t4 - 1}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-0.5 w-5 bg-amber-500"></div>
+                      <span>{t("mapSettings.medium")}: {legendThresholds.t2}-{legendThresholds.t3 - 1}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-0.5 w-5 bg-yellow-500"></div>
+                      <span>{t("mapSettings.lowMed")}: {legendThresholds.t1}-{legendThresholds.t2 - 1}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-0.5 w-5 bg-lime-500"></div>
+                      <span>{t("mapSettings.low")}: {legendThresholds.min + 1}-{legendThresholds.t1 - 1}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-0.5 w-5 bg-gray-500"></div>
+                      <span>{t("mapSettings.minimal")}: {legendThresholds.min}</span>
+                    </div>
+                    <div className="mt-1 flex items-center gap-2 border-t border-gray-200 pt-1 dark:border-neutral-700">
+                      <div className="h-0.5 w-5 bg-violet-500"></div>
+                      <span>{t("mapSettings.mqttConnections")}</span>
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+
+              {mapLayerSettings.showLivePacketPropagation && (
+                <div className="flex flex-col gap-[5px] border-t border-gray-200 pt-3 dark:border-neutral-700">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    {t("mapSettings.packetLegend")}
+                  </div>
+                  {LIVE_PACKET_TYPE_OPTIONS.map((packetType) => {
+                    const isEnabled = mapLayerSettings.livePacketTypes.includes(packetType.key);
+
+                    return (
+                      <button
+                        key={packetType.key}
+                        type="button"
+                        onClick={() => toggleLivePacketType(packetType.key)}
+                        title={t(packetType.labelKey)}
+                        className={`flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left text-gray-700 transition dark:text-gray-200 ${
+                          isEnabled
+                            ? "bg-slate-900/5 opacity-100 dark:bg-white/10"
+                            : "bg-transparent opacity-65 hover:bg-slate-900/5 dark:hover:bg-white/5"
+                        }`}
+                      >
+                        <div className="relative h-[10px] w-5">
+                          <div
+                            style={{
+                              position: 'absolute',
+                              left: 0,
+                              right: 0,
+                              top: '50%',
+                              height: '6px',
+                              transform: 'translateY(-50%)',
+                              borderRadius: '999px',
+                              backgroundColor: packetType.color,
+                              opacity: isEnabled ? 0.2 : 0.1,
+                            }}
+                          />
+                          <div
+                            style={{
+                              position: 'absolute',
+                              left: 0,
+                              right: 0,
+                              top: '50%',
+                              height: '2px',
+                              transform: 'translateY(-50%)',
+                              borderRadius: '999px',
+                              backgroundColor: packetType.color,
+                              opacity: isEnabled ? 0.8 : 0.45,
+                            }}
+                          />
+                          <div
+                            style={{
+                              position: 'absolute',
+                              right: 0,
+                              top: '50%',
+                              width: '8px',
+                              height: '8px',
+                              transform: 'translateY(-50%)',
+                              borderRadius: '999px',
+                              backgroundColor: packetType.color,
+                              boxShadow: isEnabled ? `0 0 8px ${packetType.color}` : 'none',
+                            }}
+                          />
+                        </div>
+                        <span>{t(packetType.labelKey)}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </MapLegendPanel>
         </div>
       )}
     </div>

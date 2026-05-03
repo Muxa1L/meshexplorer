@@ -242,6 +242,7 @@ export const enMessages = {
     resolution: "Resolution (geohash precision)",
     refreshMapNodes: "Refresh map nodes",
     pathTraffic: "Path Traffic",
+    mapLegend: "Map Legend",
     nodeLegend: "Node Colors",
     meshtasticNodes: "Meshtastic",
     high: "High",

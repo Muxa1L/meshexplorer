@@ -242,6 +242,7 @@ export const ruMessages = {
     resolution: "Разрешение (точность geohash)",
     refreshMapNodes: "Обновить узлы на карте",
     pathTraffic: "Трафик маршрутов",
+    mapLegend: "Легенда карты",
     nodeLegend: "Цвета узлов",
     meshtasticNodes: "Meshtastic",
     high: "Высокий",
