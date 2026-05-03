@@ -50,7 +50,14 @@ interface PacketPage {
 }
 
 function getPacketCacheKey(packet: MeshPacket) {
-  return packet.message_hash || `${packet.ingest_timestamp}-${packet.packet}`;
+  return [
+    packet.ingest_timestamp,
+    packet.message_hash || 'no-hash',
+    packet.broker || 'no-broker',
+    packet.topic || 'no-topic',
+    packet.origin_pubkey || 'no-origin',
+    packet.packet || 'no-packet',
+  ].join('|');
 }
 
 function mergeIncomingPackets(existingPackets: MeshPacket[], incomingPackets: MeshPacket[], limit: number) {
@@ -808,7 +815,7 @@ export default function PacketAnalyzer() {
                   />
                   {!collapsedGroups.has(group.key) && group.packets.map((p, idx) => (
                     <PacketRow
-                      key={`${p.ingest_timestamp}-${p.message_hash || idx}`}
+                      key={getPacketCacheKey(p)}
                       packet={p}
                       isSelected={selectedPacket === p}
                       onClick={() => setSelectedPacket(prev => prev === p ? null : p)}
@@ -822,9 +829,9 @@ export default function PacketAnalyzer() {
               </>
             ) : (
               <>
-                {packets.map((p, idx) => (
+                {packets.map((p) => (
                 <PacketRow
-                  key={`${p.ingest_timestamp}-${p.message_hash || idx}`}
+                  key={getPacketCacheKey(p)}
                   packet={p}
                   isSelected={selectedPacket === p}
                   onClick={() => setSelectedPacket(prev => prev === p ? null : p)}
