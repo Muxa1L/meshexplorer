@@ -77,6 +77,18 @@ The middleware applies the following CORS headers to all `/api/*` routes:
 
 The application includes Docker support for easy deployment. The Docker configuration is set up to connect to ClickHouse running on the Docker host.
 
+### Published Container Image
+
+GitHub Actions now builds and publishes the production app image to GitHub Container Registry (GHCR) as:
+
+```bash
+ghcr.io/muxa1l/meshexplorer:latest
+```
+
+- Pushes to `main` publish `latest`, `main`, and commit-SHA tags
+- Version tags like `v1.2.3` publish a matching image tag
+- Pull requests build the Docker image for validation without pushing it
+
 ### Prerequisites
 
 - Docker and Docker Compose installed
