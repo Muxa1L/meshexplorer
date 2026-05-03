@@ -1433,13 +1433,13 @@ export default function MapView({ target = '_self' }: MapViewProps = {}) {
                   type="button"
                   onClick={() => toggleLivePacketType(packetType.key)}
                   title={t(packetType.labelKey)}
-                  className={`flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left text-gray-700 transition-colors dark:text-gray-200 ${
+                  className={`flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left text-gray-700 transition-colors transition-opacity dark:text-gray-200 ${
                     isEnabled
                       ? "bg-slate-900/5 opacity-100 dark:bg-white/10"
                       : "bg-transparent opacity-65 hover:bg-slate-900/5 dark:hover:bg-white/5"
                   }`}
                 >
-                  <div style={{ position: 'relative', width: '20px', height: '10px' }}>
+                  <div className="relative h-[10px] w-5">
                     <div
                       style={{
                         position: 'absolute',
