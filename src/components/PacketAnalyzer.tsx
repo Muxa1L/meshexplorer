@@ -2,8 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CircleMarker, MapContainer, Polyline, TileLayer, Tooltip, useMap } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
+import dynamic from "next/dynamic";
 import { buildApiUrl } from "@/lib/api";
 import {
   XMarkIcon,
@@ -24,6 +23,8 @@ import { buildNodePrefixLookup, resolvePacketPropagationNodes, splitPathHex } fr
 import { useConfigWithRegion } from "@/hooks/useConfigWithRegion";
 import { useLocale } from "./LocaleProvider";
 import type { NodePosition } from "@/types/map";
+
+const PacketPathMap = dynamic(() => import("./PacketPathMap"), { ssr: false });
 
 // ---------------------------------------------------------------------------
 // Types
@@ -427,25 +428,6 @@ function PathChain({ path, pathLen }: { path: string; pathLen: number }) {
   );
 }
 
-function PacketPathMapViewport({ points }: { points: [number, number][] }) {
-  const map = useMap();
-
-  useEffect(() => {
-    if (points.length === 0) {
-      return;
-    }
-
-    if (points.length === 1) {
-      map.setView(points[0], 11);
-      return;
-    }
-
-    map.fitBounds(points, { padding: [24, 24] });
-  }, [map, points]);
-
-  return null;
-}
-
 function PacketPathMapPreview({ packet }: { packet: MeshPacket }) {
   const { t } = useLocale();
   const { config } = useConfigWithRegion();
@@ -523,40 +505,7 @@ function PacketPathMapPreview({ packet }: { packet: MeshPacket }) {
 
   return (
     <div className="space-y-3">
-      <div className="h-64 overflow-hidden rounded-lg border border-gray-200 dark:border-neutral-700">
-        <MapContainer
-          center={points[0]}
-          zoom={10}
-          scrollWheelZoom={true}
-          attributionControl={false}
-          dragging={true}
-          className="h-full w-full"
-        >
-          <TileLayer
-            attribution='Tiles &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          <PacketPathMapViewport points={points} />
-          <Polyline positions={points} pathOptions={{ color: "#7c3aed", weight: 4, opacity: 0.9 }} />
-          {resolvedNodes.map(({ prefix, node, kind }) => (
-            <CircleMarker
-              key={`${node.node_id}-${kind}-${prefix}`}
-              center={[node.latitude, node.longitude]}
-              radius={kind === "origin" ? 7 : 6}
-              pathOptions={{
-                color: kind === "origin" ? "#2563eb" : "#7c3aed",
-                fillColor: kind === "origin" ? "#60a5fa" : "#a78bfa",
-                fillOpacity: 0.95,
-                weight: 2,
-              }}
-            >
-              <Tooltip>
-                {(node.short_name || node.name || prefix).trim()} ({prefix})
-              </Tooltip>
-            </CircleMarker>
-          ))}
-        </MapContainer>
-      </div>
+      <PacketPathMap points={points} resolvedNodes={resolvedNodes} />
       <div className="flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400">
         {resolvedNodes.map(({ prefix, node, kind }) => (
           <span
