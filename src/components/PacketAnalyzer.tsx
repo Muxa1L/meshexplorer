@@ -527,7 +527,7 @@ function PacketPathMapPreview({ packet }: { packet: MeshPacket }) {
         <MapContainer
           center={points[0]}
           zoom={10}
-          scrollWheelZoom={false}
+          scrollWheelZoom={true}
           attributionControl={false}
           dragging={true}
           className="h-full w-full"
