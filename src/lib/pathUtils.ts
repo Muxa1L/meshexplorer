@@ -1,3 +1,5 @@
+import type { NodePosition } from "@/types/map";
+
 export interface PathData {
   origin: string;
   pubkey: string;
@@ -15,6 +17,18 @@ export interface PathGroup {
 export interface TreeNode {
   name: string;
   children?: TreeNode[];
+}
+
+export interface PacketPathInput {
+  path: string;
+  pathLen?: number;
+  originPubkey: string;
+}
+
+export interface ResolvedPacketPathNode {
+  prefix: string;
+  node: NodePosition;
+  kind: "origin" | "repeater";
 }
 
 export const SUPPORTED_PATH_HASH_SIZES = [1, 2, 3] as const;
@@ -70,6 +84,78 @@ export function getPubkeyPrefix(pubkey: string, hashSizeBytes?: number): string 
 
 export function getSupportedPubkeyPrefixes(pubkey: string): string[] {
   return SUPPORTED_PATH_HASH_SIZES.map((hashSizeBytes) => getPubkeyPrefix(pubkey, hashSizeBytes));
+}
+
+export function buildNodePrefixLookup(nodes: NodePosition[]) {
+  const lookups = new Map<number, Map<string, NodePosition | null>>();
+
+  for (const hashSizeBytes of SUPPORTED_PATH_HASH_SIZES) {
+    const lookup = new Map<string, NodePosition | null>();
+
+    for (const node of nodes) {
+      if (!Number.isFinite(node.latitude) || !Number.isFinite(node.longitude)) {
+        continue;
+      }
+
+      const prefix = getPubkeyPrefix(node.node_id, hashSizeBytes);
+      const existing = lookup.get(prefix);
+
+      if (!existing) {
+        lookup.set(prefix, node);
+      } else if (existing.node_id !== node.node_id) {
+        lookup.set(prefix, null);
+      }
+    }
+
+    lookups.set(hashSizeBytes, lookup);
+  }
+
+  return lookups;
+}
+
+export function resolvePacketPropagationNodes(
+  packet: PacketPathInput,
+  nodePrefixLookup: Map<number, Map<string, NodePosition | null>>,
+): ResolvedPacketPathNode[] {
+  if (!packet.path || !packet.pathLen || packet.pathLen < 1) {
+    return [];
+  }
+
+  const hashSizeBytes = getPathHashSizeBytes(packet.path, packet.pathLen);
+  const prefixLookup = nodePrefixLookup.get(hashSizeBytes);
+
+  if (!prefixLookup) {
+    return [];
+  }
+
+  const prefixes = [
+    { prefix: getPubkeyPrefix(packet.originPubkey, hashSizeBytes), kind: "origin" as const },
+    ...splitPathHex(packet.path, packet.pathLen).map((prefix) => ({ prefix, kind: "repeater" as const })),
+  ].filter((entry) => entry.prefix);
+
+  const nodes: ResolvedPacketPathNode[] = [];
+  let lastNodeId: string | null = null;
+
+  for (const entry of prefixes) {
+    const node = prefixLookup.get(entry.prefix);
+    if (!node || node.node_id === lastNodeId) {
+      continue;
+    }
+
+    nodes.push({ prefix: entry.prefix, node, kind: entry.kind });
+    lastNodeId = node.node_id;
+  }
+
+  return nodes;
+}
+
+export function buildPacketPropagationPath(
+  packet: PacketPathInput,
+  nodePrefixLookup: Map<number, Map<string, NodePosition | null>>,
+) {
+  const resolvedNodes = resolvePacketPropagationNodes(packet, nodePrefixLookup);
+  const points = resolvedNodes.map(({ node }) => [node.latitude, node.longitude] as [number, number]);
+  return points.length >= 2 ? points : null;
 }
 
 /**

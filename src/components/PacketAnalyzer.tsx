@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CircleMarker, MapContainer, Polyline, TileLayer, Tooltip, useMap } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 import { buildApiUrl } from "@/lib/api";
 import {
   XMarkIcon,
@@ -18,8 +20,10 @@ import {
   payloadPreview,
   type DecodedPayload,
 } from "@/lib/packet-decode";
-import { splitPathHex } from "@/lib/pathUtils";
+import { buildNodePrefixLookup, resolvePacketPropagationNodes, splitPathHex } from "@/lib/pathUtils";
+import { useConfigWithRegion } from "@/hooks/useConfigWithRegion";
 import { useLocale } from "./LocaleProvider";
+import type { NodePosition } from "@/types/map";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -47,6 +51,10 @@ interface PacketPage {
   packets: MeshPacket[];
   hasMore: boolean;
   oldestTimestamp?: string;
+}
+
+function isNodeArray(value: unknown): value is NodePosition[] {
+  return Array.isArray(value);
 }
 
 function getPacketCacheKey(packet: MeshPacket) {
@@ -419,6 +427,149 @@ function PathChain({ path, pathLen }: { path: string; pathLen: number }) {
   );
 }
 
+function PacketPathMapViewport({ points }: { points: [number, number][] }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (points.length === 0) {
+      return;
+    }
+
+    if (points.length === 1) {
+      map.setView(points[0], 11);
+      return;
+    }
+
+    map.fitBounds(points, { padding: [24, 24] });
+  }, [map, points]);
+
+  return null;
+}
+
+function PacketPathMapPreview({ packet }: { packet: MeshPacket }) {
+  const { t } = useLocale();
+  const { config } = useConfigWithRegion();
+
+  const { data: nodes = [], isLoading } = useQuery<NodePosition[]>({
+    queryKey: ["packet-path-map-preview", config?.selectedRegion ?? null, config?.lastSeen ?? null],
+    enabled: packet.path_len > 0,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (config?.selectedRegion) {
+        params.set("region", config.selectedRegion);
+      }
+      if (config?.lastSeen !== null && config?.lastSeen !== undefined) {
+        params.set("lastSeen", String(config.lastSeen));
+      }
+
+      const url = params.size > 0 ? `/api/map?${params.toString()}` : "/api/map";
+      const response = await fetch(buildApiUrl(url));
+      if (!response.ok) {
+        throw new Error("Failed to fetch map nodes");
+      }
+
+      const data: unknown = await response.json();
+      if (isNodeArray(data)) {
+        return data;
+      }
+      if (typeof data === "object" && data !== null && "nodes" in data && isNodeArray(data.nodes)) {
+        return data.nodes;
+      }
+      return [];
+    },
+  });
+
+  const resolvedNodes = useMemo(() => {
+    if (packet.path_len < 1 || nodes.length === 0) {
+      return [];
+    }
+
+    return resolvePacketPropagationNodes({
+      path: packet.path,
+      pathLen: packet.path_len,
+      originPubkey: packet.origin_pubkey,
+    }, buildNodePrefixLookup(nodes));
+  }, [nodes, packet.origin_pubkey, packet.path, packet.path_len]);
+
+  const points = useMemo(
+    () => resolvedNodes.map(({ node }) => [node.latitude, node.longitude] as [number, number]),
+    [resolvedNodes],
+  );
+
+  if (packet.path_len < 1) {
+    return (
+      <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-3 text-sm text-gray-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-gray-400">
+        {t("packetAnalyzer.noRepeaterPath")}
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-3 text-sm text-gray-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-gray-400">
+        {t("packetAnalyzer.loadingMapPreview")}
+      </div>
+    );
+  }
+
+  if (points.length < 2) {
+    return (
+      <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-3 text-sm text-gray-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-gray-400">
+        {t("packetAnalyzer.noMapPreview")}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="h-64 overflow-hidden rounded-lg border border-gray-200 dark:border-neutral-700">
+        <MapContainer
+          center={points[0]}
+          zoom={10}
+          scrollWheelZoom={false}
+          dragging={true}
+          className="h-full w-full"
+        >
+          <TileLayer
+            attribution='Tiles &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          <PacketPathMapViewport points={points} />
+          <Polyline positions={points} pathOptions={{ color: "#7c3aed", weight: 4, opacity: 0.9 }} />
+          {resolvedNodes.map(({ prefix, node, kind }) => (
+            <CircleMarker
+              key={`${node.node_id}-${kind}-${prefix}`}
+              center={[node.latitude, node.longitude]}
+              radius={kind === "origin" ? 7 : 6}
+              pathOptions={{
+                color: kind === "origin" ? "#2563eb" : "#7c3aed",
+                fillColor: kind === "origin" ? "#60a5fa" : "#a78bfa",
+                fillOpacity: 0.95,
+                weight: 2,
+              }}
+            >
+              <Tooltip>
+                {(node.short_name || node.name || prefix).trim()} ({prefix})
+              </Tooltip>
+            </CircleMarker>
+          ))}
+        </MapContainer>
+      </div>
+      <div className="flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400">
+        {resolvedNodes.map(({ prefix, node, kind }) => (
+          <span
+            key={`${node.node_id}-${prefix}-label`}
+            className={`rounded-full px-2 py-1 ${kind === "origin" ? "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300" : "bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300"}`}
+          >
+            {kind === "origin" ? t("packetAnalyzer.originNode") : t("packetAnalyzer.repeaterNode")}: {(node.short_name || node.name || prefix).trim()}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // GroupHeader — collapsible section header for grouped mode
 // ---------------------------------------------------------------------------
@@ -544,6 +695,11 @@ function PacketDetail({ packet, onClose }: { packet: MeshPacket; onClose: () => 
               </div>
             )}
           </div>
+        </section>
+
+        <section>
+          <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">{t("packetAnalyzer.mapPreview")}</h4>
+          <PacketPathMapPreview packet={packet} />
         </section>
 
         {/* Payload hex */}

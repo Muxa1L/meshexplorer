@@ -21,7 +21,7 @@ import { type AllNeighborsConnection } from "@/hooks/useAllNeighbors";
 import { useQueryParams } from "@/hooks/useQueryParams";
 import WardriveCoverageLayer from "@/components/WardriveCoverageLayer";
 import { useLocale } from "./LocaleProvider";
-import { getPathHashSizeBytes, getPubkeyPrefix, splitPathHex } from "@/lib/pathUtils";
+import { buildNodePrefixLookup, buildPacketPropagationPath } from "@/lib/pathUtils";
 
 const DEFAULT = {
   lat: 45.02756,
@@ -98,69 +98,6 @@ function isLivePacketTypeEnabled(payloadType: number, enabledTypes: Set<PacketTy
   }
 
   return !LIVE_PACKET_COLORS[payloadType] && enabledTypes.has('other');
-}
-
-function buildNodePrefixLookup(nodes: NodePosition[]) {
-  const lookups = new Map<number, Map<string, NodePosition | null>>();
-
-  for (const hashSizeBytes of [1, 2, 3]) {
-    const lookup = new Map<string, NodePosition | null>();
-
-    for (const node of nodes) {
-      if (!Number.isFinite(node.latitude) || !Number.isFinite(node.longitude)) {
-        continue;
-      }
-
-      const prefix = getPubkeyPrefix(node.node_id, hashSizeBytes);
-      const existing = lookup.get(prefix);
-
-      if (!existing) {
-        lookup.set(prefix, node);
-      } else if (existing.node_id !== node.node_id) {
-        lookup.set(prefix, null);
-      }
-    }
-
-    lookups.set(hashSizeBytes, lookup);
-  }
-
-  return lookups;
-}
-
-function buildPacketPropagationPath(
-  packet: LiveMeshPacket,
-  nodePrefixLookup: Map<number, Map<string, NodePosition | null>>,
-) {
-  if (!packet.path || packet.path_len < 1) {
-    return null;
-  }
-
-  const hashSizeBytes = getPathHashSizeBytes(packet.path, packet.path_len);
-  const prefixLookup = nodePrefixLookup.get(hashSizeBytes);
-
-  if (!prefixLookup) {
-    return null;
-  }
-
-  const prefixes = [
-    getPubkeyPrefix(packet.origin_pubkey, hashSizeBytes),
-    ...splitPathHex(packet.path, packet.path_len),
-  ].filter(Boolean);
-
-  const points: [number, number][] = [];
-  let lastNodeId: string | null = null;
-
-  for (const prefix of prefixes) {
-    const node = prefixLookup.get(prefix);
-    if (!node || node.node_id === lastNodeId) {
-      continue;
-    }
-
-    points.push([node.latitude, node.longitude]);
-    lastNodeId = node.node_id;
-  }
-
-  return points.length >= 2 ? points : null;
 }
 
 function getSegmentLengths(points: [number, number][]) {
@@ -796,7 +733,11 @@ function LivePacketPropagation({
         }
         seenPacketIdsRef.current.set(packetId, now);
 
-        const points = buildPacketPropagationPath(packet, nodePrefixLookupRef.current);
+        const points = buildPacketPropagationPath({
+          path: packet.path,
+          pathLen: packet.path_len,
+          originPubkey: packet.origin_pubkey,
+        }, nodePrefixLookupRef.current);
         if (!points) {
           return;
         }

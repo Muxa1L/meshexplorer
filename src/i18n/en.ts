@@ -459,6 +459,12 @@ export const enMessages = {
     noSnrData: "No SNR data yet (outbound)",
     hop: "hop",
     hopsLabel: "Hops",
+    mapPreview: "Map Preview",
+    loadingMapPreview: "Loading map preview…",
+    noMapPreview: "Not enough mapped retransmission nodes were found for this packet.",
+    noRepeaterPath: "This packet has no recorded repeater retransmissions.",
+    originNode: "Origin",
+    repeaterNode: "Repeater",
   },
   notFound: {
     title: "Page Not Found",
