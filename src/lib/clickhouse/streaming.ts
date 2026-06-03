@@ -126,12 +126,11 @@ export function createClickHouseStreamer<T = any>(config: StreamingConfig) {
 
         // Only yield if we have new rows
         if (rows.length > 0) {
-          // Update timestamp from the latest row (first in DESC order)
-          if (rows[0] && typeof rows[0] === 'object' && timeColumn in rows[0]) {
-            lastTimestamp = (rows[0] as any)[timeColumn];
+          // Update timestamp from the latest row (last in ASC order)
+          const lastRow = rows[rows.length - 1];
+          if (lastRow && typeof lastRow === 'object' && timeColumn in lastRow) {
+            lastTimestamp = (lastRow as any)[timeColumn];
           }
-
-          rows.reverse();
 
           // Skip initial messages if configured
           if (skipInitialMessages && isFirstPoll) {
@@ -142,7 +141,7 @@ export function createClickHouseStreamer<T = any>(config: StreamingConfig) {
             continue;
           }
 
-          // Yield separate events for each row
+          // Yield separate events for each row (rows are ASC: oldest -> newest)
           for (const row of rows) {
             yield {
               row,
@@ -150,7 +149,6 @@ export function createClickHouseStreamer<T = any>(config: StreamingConfig) {
             };
           }
         }
-
         isFirstPoll = false;
 
         // Wait before next poll
@@ -226,7 +224,7 @@ export function createMeshcoreAdvertsStreamerConfig(
         adv_timestamp
       FROM meshcore_adverts 
       WHERE ingest_timestamp > {lastTimestamp:DateTime64}
-      ORDER BY ingest_timestamp DESC
+      ORDER BY ingest_timestamp ASC
       LIMIT {maxRows:UInt32}
     `,
     timeColumn: 'ingest_timestamp',
@@ -270,7 +268,7 @@ export function createChatMessagesStreamerConfig(
         message_id
       FROM meshcore_public_channel_messages 
       WHERE ingest_timestamp > {lastTimestamp:DateTime64}
-      ORDER BY ingest_timestamp DESC
+      ORDER BY ingest_timestamp ASC
       LIMIT {maxRows:UInt32}
     `,
     timeColumn: 'ingest_timestamp',
@@ -337,7 +335,7 @@ export function createMeshcorePacketsStreamerConfig(
         origin
       FROM meshcore_packets 
       WHERE ingest_timestamp > {lastTimestamp:DateTime64}
-      ORDER BY ingest_timestamp DESC
+      ORDER BY ingest_timestamp ASC
       LIMIT {maxRows:UInt32}
     `,
     timeColumn: 'ingest_timestamp',
