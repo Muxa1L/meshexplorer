@@ -154,7 +154,7 @@ export function useChatMessages({
     }
 
     if (streamStartAfterTimestampRef.current) {
-      params.set('lastTimestamp', streamStartAfterTimestampRef.current);
+      params.set('firstTimestamp', streamStartAfterTimestampRef.current);
     } else {
       params.set('skipInitialMessages', 'true');
     }

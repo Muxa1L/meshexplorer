@@ -764,7 +764,7 @@ export default function PacketAnalyzer() {
     }
 
     if (streamStartTimestampRef.current) {
-      params.set('lastTimestamp', streamStartTimestampRef.current);
+      params.set('firstTimestamp', streamStartTimestampRef.current);
     } else {
       params.set('skipInitialMessages', 'true');
     }

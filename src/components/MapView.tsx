@@ -715,7 +715,7 @@ function LivePacketPropagation({
           // API may return an array or an object with `packets`.
           const latestPacket = Array.isArray(latestData) ? latestData[0] : (latestData?.packets?.[0] ?? null);
           const ts = latestPacket?.ingest_timestamp;
-          if (ts) lastTimestampParam = `&lastTimestamp=${encodeURIComponent(ts)}`;
+          if (ts) lastTimestampParam = `&firstTimestamp=${encodeURIComponent(ts)}`;
           else lastTimestampParam = `&skipInitialMessages=true`;
         } else {
           lastTimestampParam = `&skipInitialMessages=true`;

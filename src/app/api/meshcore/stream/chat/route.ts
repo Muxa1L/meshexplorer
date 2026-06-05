@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   const pollInterval = searchParams.get('pollInterval');
   const maxRows = searchParams.get('maxRows');
   const skipInitialMessages = searchParams.has('skipInitialMessages');
-  const lastTimestamp = searchParams.get('lastTimestamp') ?? searchParams.get('firstTimestamp');
+  const firstTimestamp = searchParams.get('firstTimestamp') ?? searchParams.get('lastTimestamp');
 
   // Validate region against allowed values (same as packets endpoint)
   const allowedRegions = ['krasnodar_pub', 'stavropol'];
@@ -101,7 +101,7 @@ export async function GET(req: NextRequest) {
 
           const data = JSON.stringify(outputData);
           controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-        }, { startAfter: lastTimestamp ?? null });
+        }, { startAfter: firstTimestamp ?? null });
       } catch (error) {
         console.error('Meshcore chat streaming error:', error);
         const errorData = JSON.stringify({
