@@ -690,10 +690,14 @@ function LivePacketPropagation({
     };
   }, []);
 
+  const streamStartedRef = useRef(false);
+
   useEffect(() => {
-    if (!enabled || nodes.length === 0 || enabledPacketTypeSet.size === 0) {
+    if (!enabled || enabledPacketTypeSet.size === 0) {
       return;
     }
+    // Avoid restarting the stream repeatedly when `nodes.length` or other volatile state updates.
+    if (streamStartedRef.current) return;
 
     let cancelled = false;
     let eventSource: EventSource | null = null;
@@ -844,11 +848,14 @@ function LivePacketPropagation({
       };
     })();
 
+    streamStartedRef.current = true;
+
     return () => {
       cancelled = true;
       if (eventSource) eventSource.close();
+      streamStartedRef.current = false;
     };
-  }, [enabled, enabledPacketTypeSet, nodes.length, region]);
+  }, [enabled, enabledPacketTypeSet, region]);
 
   return null;
 }

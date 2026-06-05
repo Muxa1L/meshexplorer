@@ -86,6 +86,9 @@ PARTITION BY toYYYYMM(timestamp)
 ORDER BY (origin_pubkey, timestamp)
 SETTINGS index_granularity = 8192;
 
+-- Region-scoped status lookups typically filter broker/topic plus recent timestamp.
+CREATE INDEX IF NOT EXISTS idx_status_broker_topic ON meshcore_status (broker, topic) TYPE set(0) GRANULARITY 1;
+
 -- Index for efficient queries by origin name
 CREATE INDEX IF NOT EXISTS idx_origin ON meshcore_status (origin) TYPE bloom_filter(0.01) GRANULARITY 1;
 
@@ -129,7 +132,11 @@ CREATE TABLE IF NOT EXISTS meshcore_packets (
     INDEX idx_mesh_time mesh_timestamp TYPE minmax GRANULARITY 1,
     INDEX idx_broker broker TYPE bloom_filter GRANULARITY 1,
     INDEX idx_topic topic TYPE bloom_filter GRANULARITY 1,
+    INDEX idx_broker_topic (broker, topic) TYPE set(0) GRANULARITY 1,
     INDEX idx_payload_type payload_type TYPE set(0) GRANULARITY 1,
+    INDEX idx_route_type route_type TYPE set(0) GRANULARITY 1,
+    INDEX idx_path_len path_len TYPE set(0) GRANULARITY 1,
+    INDEX idx_channel_hash substring(hex(payload), 1, 2) TYPE set(0) GRANULARITY 1,
     INDEX idx_origin_pubkey origin_pubkey TYPE bloom_filter GRANULARITY 1
 ) ENGINE = MergeTree()
 PARTITION BY toYYYYMM(ingest_timestamp)
@@ -181,8 +188,11 @@ CREATE TABLE IF NOT EXISTS meshcore_adverts (
     INDEX idx_ingest_time ingest_timestamp TYPE minmax GRANULARITY 1,
     INDEX idx_location (latitude, longitude) TYPE minmax GRANULARITY 1,
     INDEX idx_is_repeater is_repeater TYPE set(0) GRANULARITY 1,
+    INDEX idx_has_location has_location TYPE set(0) GRANULARITY 1,
     INDEX idx_broker broker TYPE bloom_filter GRANULARITY 1,
     INDEX idx_topic topic TYPE bloom_filter GRANULARITY 1,
+    INDEX idx_broker_topic (broker, topic) TYPE set(0) GRANULARITY 1,
+    INDEX idx_path_len path_len TYPE set(0) GRANULARITY 1,
     INDEX idx_origin_pubkey origin_pubkey TYPE bloom_filter GRANULARITY 1
 ) ENGINE = MergeTree()
 PARTITION BY toYYYYMM(ingest_timestamp)
@@ -350,8 +360,41 @@ ORDER BY message_count DESC;
 -- INDEXES FOR PERFORMANCE
 -- ============================================================================
 
--- Additional indexes for common query patterns can be added here
--- Note: Many indexes are already defined in table definitions above
+-- Query-driven secondary indexes for current-state materialized views.
+-- These are the storage tables behind map, coverage, repeater, and search endpoints.
+ALTER TABLE meshcore_adverts_latest
+    ADD INDEX IF NOT EXISTS idx_last_seen last_seen TYPE minmax GRANULARITY 1;
+ALTER TABLE meshcore_adverts_latest
+    ADD INDEX IF NOT EXISTS idx_is_repeater is_repeater TYPE set(0) GRANULARITY 1;
+ALTER TABLE meshcore_adverts_latest
+    ADD INDEX IF NOT EXISTS idx_location (latitude, longitude) TYPE minmax GRANULARITY 1;
+ALTER TABLE meshcore_adverts_latest
+    ADD INDEX IF NOT EXISTS idx_broker_topic (broker, topic) TYPE set(0) GRANULARITY 1;
+
+ALTER TABLE unified_latest_nodeinfo
+    ADD INDEX IF NOT EXISTS idx_last_seen last_seen TYPE minmax GRANULARITY 1;
+ALTER TABLE unified_latest_nodeinfo
+    ADD INDEX IF NOT EXISTS idx_type type TYPE set(0) GRANULARITY 1;
+ALTER TABLE unified_latest_nodeinfo
+    ADD INDEX IF NOT EXISTS idx_location (latitude, longitude) TYPE minmax GRANULARITY 1;
+
+-- Run these once on existing deployments after adding the new index definitions above.
+-- They are intentionally left commented out because materialization can be expensive.
+-- ALTER TABLE meshcore_status MATERIALIZE INDEX idx_status_broker_topic;
+-- ALTER TABLE meshcore_packets MATERIALIZE INDEX idx_broker_topic;
+-- ALTER TABLE meshcore_packets MATERIALIZE INDEX idx_route_type;
+-- ALTER TABLE meshcore_packets MATERIALIZE INDEX idx_path_len;
+-- ALTER TABLE meshcore_packets MATERIALIZE INDEX idx_channel_hash;
+-- ALTER TABLE meshcore_adverts MATERIALIZE INDEX idx_has_location;
+-- ALTER TABLE meshcore_adverts MATERIALIZE INDEX idx_broker_topic;
+-- ALTER TABLE meshcore_adverts MATERIALIZE INDEX idx_path_len;
+-- ALTER TABLE meshcore_adverts_latest MATERIALIZE INDEX idx_last_seen;
+-- ALTER TABLE meshcore_adverts_latest MATERIALIZE INDEX idx_is_repeater;
+-- ALTER TABLE meshcore_adverts_latest MATERIALIZE INDEX idx_location;
+-- ALTER TABLE meshcore_adverts_latest MATERIALIZE INDEX idx_broker_topic;
+-- ALTER TABLE unified_latest_nodeinfo MATERIALIZE INDEX idx_last_seen;
+-- ALTER TABLE unified_latest_nodeinfo MATERIALIZE INDEX idx_type;
+-- ALTER TABLE unified_latest_nodeinfo MATERIALIZE INDEX idx_location;
 
 -- ============================================================================
 -- COMMENTS AND METADATA

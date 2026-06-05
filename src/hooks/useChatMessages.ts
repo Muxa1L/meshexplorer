@@ -147,9 +147,10 @@ export function useChatMessages({
       params.set('channel_id', channelId.toLowerCase());
     }
 
-    // Use the newest loaded message timestamp so stream only requests messages newer than our current history.
+    // Initialize stream start timestamp from the newest loaded message once (avoid depending on allMessages)
     if (streamStartAfterTimestampRef.current === null) {
-      streamStartAfterTimestampRef.current = allMessages[0]?.ingest_timestamp ?? undefined;
+      const newest = messagesQuery.data?.pages?.[0]?.messages?.[0]?.ingest_timestamp ?? null;
+      streamStartAfterTimestampRef.current = newest ?? null;
     }
 
     if (streamStartAfterTimestampRef.current) {
@@ -181,7 +182,7 @@ export function useChatMessages({
       eventSource.close();
       streamStartAfterTimestampRef.current = null;
     };
-  }, [appendStreamMessages, allMessages, autoRefreshEnabled, channelId, enabled, loading, region]);
+  }, [appendStreamMessages, autoRefreshEnabled, channelId, enabled, loading, region]);
   
   // Check if there are more pages to load
   const hasNextPage = messagesQuery.hasNextPage;
