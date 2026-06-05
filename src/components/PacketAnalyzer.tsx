@@ -759,7 +759,8 @@ export default function PacketAnalyzer() {
     }
 
     if (streamStartTimestampRef.current === null) {
-      streamStartTimestampRef.current = packets[0]?.ingest_timestamp ?? undefined;
+      const newest = data?.pages?.[0]?.packets?.[0]?.ingest_timestamp ?? null;
+      streamStartTimestampRef.current = newest ?? null;
     }
 
     if (streamStartTimestampRef.current) {

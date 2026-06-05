@@ -6,6 +6,7 @@ import { StreamingConfig, StreamingParams, StreamingResult, createClickHouseStre
 interface StreamSubscription<T> {
   id: string;
   callback: (result: StreamingResult<T>) => void | Promise<void>;
+  startAfter?: string | null;
 }
 
 /**
@@ -32,9 +33,10 @@ class CachedStream<T = any> {
    */
   subscribe(
     callback: (result: StreamingResult<T>) => void | Promise<void>
+    , startAfter: string | null = null
   ): () => void {
     const id = `sub_${++this.subscriptionIdCounter}`;
-    const subscription: StreamSubscription<T> = { id, callback };
+    const subscription: StreamSubscription<T> = { id, callback, startAfter };
     this.subscribers.set(id, subscription);
 
     // Clear inactivity timeout when a subscriber connects
@@ -104,12 +106,22 @@ class CachedStream<T = any> {
           break;
         }
 
-        // Broadcast result to all subscribers
-        const callbacks = Array.from(this.subscribers.values()).map(sub => sub.callback);
-        
-        for (const callback of callbacks) {
+        // Broadcast result to subscribers, honoring their startAfter preference
+        const timeColumn = this.config.timeColumn;
+        const rowTime = (result.row as any)?.[timeColumn];
+
+        for (const sub of Array.from(this.subscribers.values())) {
           try {
-            await callback(result);
+            // If subscriber specified a startAfter timestamp, only deliver rows newer than that
+            if (sub.startAfter && rowTime) {
+              const rowTs = new Date(rowTime).getTime();
+              const startTs = new Date(sub.startAfter).getTime();
+              if (isNaN(rowTs) || isNaN(startTs) || rowTs <= startTs) {
+                continue;
+              }
+            }
+
+            await sub.callback(result);
           } catch (error) {
             console.error('Error in stream subscriber callback:', error);
           }
@@ -158,7 +170,12 @@ class StreamCache {
       additionalWhereClause: config.additionalWhereClause,
       skipInitialMessages: config.skipInitialMessages
     });
-    const paramsKey = JSON.stringify(params);
+    // Avoid including per-subscriber transient params (like lastTimestamp) in the cache key
+    const paramsCopy: Record<string, any> = { ...(params || {}) };
+    delete paramsCopy.lastTimestamp;
+    delete paramsCopy.firstTimestamp;
+    const paramsKey = JSON.stringify(paramsCopy);
+
     return Buffer.from(`${configKey}::${paramsKey}`).toString('base64');
   }
 
@@ -209,8 +226,9 @@ export const streamCache = new StreamCache();
 export function subscribeToStream<T = any>(
   config: StreamingConfig,
   params: StreamingParams,
-  callback: (result: StreamingResult<T>) => void | Promise<void>
+  callback: (result: StreamingResult<T>) => void | Promise<void>,
+  options?: { startAfter?: string | null }
 ): () => void {
   const stream = streamCache.getOrCreateStream<T>(config, params);
-  return stream.subscribe(callback);
+  return stream.subscribe(callback, options?.startAfter ?? null);
 }
