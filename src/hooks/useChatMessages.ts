@@ -124,6 +124,9 @@ export function useChatMessages({
     retry: 1,
   });
 
+  const allMessages = messagesQuery.data?.pages.flatMap(page => page.messages) ?? [];
+  const loading = messagesQuery.isLoading;
+
   const appendStreamMessages = useCallback((incomingMessages: ChatMessage[]) => {
     queryClient.setQueryData(baseQueryKey, (oldData: any) => mergeNewMessages(oldData, incomingMessages));
   }, [baseQueryKey, queryClient]);
@@ -145,7 +148,7 @@ export function useChatMessages({
     }
 
     if (streamStartTimestampRef.current === null) {
-      streamStartTimestampRef.current = messages[0]?.ingest_timestamp ?? undefined;
+      streamStartTimestampRef.current = allMessages[0]?.ingest_timestamp ?? undefined;
     }
 
     if (streamStartTimestampRef.current) {
@@ -177,10 +180,7 @@ export function useChatMessages({
       eventSource.close();
       streamStartTimestampRef.current = null;
     };
-  }, [appendStreamMessages, autoRefreshEnabled, channelId, enabled, loading, region]);
-
-  // Flatten all messages from all pages
-  const allMessages = messagesQuery.data?.pages.flatMap(page => page.messages) ?? [];
+  }, [appendStreamMessages, allMessages, autoRefreshEnabled, channelId, enabled, loading, region]);
   
   // Check if there are more pages to load
   const hasNextPage = messagesQuery.hasNextPage;
