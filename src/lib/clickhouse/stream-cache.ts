@@ -32,12 +32,22 @@ class CachedStream<T = any> {
    * Subscribe to this stream, returns an unsubscribe function
    */
   subscribe(
-    callback: (result: StreamingResult<T>) => void | Promise<void>
-    , startAfter: string | null = null
+    callback: (result: StreamingResult<T>) => void | Promise<void>,
+    startAfter: string | null = null
   ): () => void {
     const id = `sub_${++this.subscriptionIdCounter}`;
     const subscription: StreamSubscription<T> = { id, callback, startAfter };
     this.subscribers.set(id, subscription);
+
+    if (startAfter) {
+      const existingLastTimestamp = this.params.lastTimestamp as string | undefined;
+      const currentStart = new Date(startAfter).getTime();
+      const existingStart = existingLastTimestamp ? new Date(existingLastTimestamp).getTime() : NaN;
+
+      if (!existingLastTimestamp || isNaN(existingStart) || currentStart < existingStart) {
+        this.params.lastTimestamp = startAfter;
+      }
+    }
 
     // Clear inactivity timeout when a subscriber connects
     if (this.inactivityTimeout) {
@@ -112,11 +122,10 @@ class CachedStream<T = any> {
 
         for (const sub of Array.from(this.subscribers.values())) {
           try {
-            // If subscriber specified a startAfter timestamp, only deliver rows newer than that
             if (sub.startAfter && rowTime) {
               const rowTs = new Date(rowTime).getTime();
               const startTs = new Date(sub.startAfter).getTime();
-              if (isNaN(rowTs) || isNaN(startTs) || rowTs <= startTs) {
+              if (!Number.isFinite(rowTs) || !Number.isFinite(startTs) || rowTs <= startTs) {
                 continue;
               }
             }

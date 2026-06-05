@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   const pollInterval = searchParams.get('pollInterval');
   const maxRows = searchParams.get('maxRows');
   const skipInitialMessages = searchParams.has('skipInitialMessages');
-  const lastTimestamp = searchParams.get('lastTimestamp');
+  const lastTimestamp = searchParams.get('lastTimestamp') ?? searchParams.get('firstTimestamp');
 
   // Validate region against allowed values
   const allowedRegions = ['krasnodar_pub', 'stavropol']; // Add more allowed regions as needed  
