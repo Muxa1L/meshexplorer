@@ -1,7 +1,7 @@
 "use client";
 
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { buildApiUrl } from '@/lib/api';
 import { ChatMessage } from '@/components/ChatMessageItem';
 
@@ -128,8 +128,10 @@ export function useChatMessages({
     queryClient.setQueryData(baseQueryKey, (oldData: any) => mergeNewMessages(oldData, incomingMessages));
   }, [baseQueryKey, queryClient]);
 
+  const streamStartTimestampRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (!enabled || !autoRefreshEnabled || !region) {
+    if (!enabled || !autoRefreshEnabled || !region || loading) {
       return;
     }
 
@@ -141,7 +143,16 @@ export function useChatMessages({
     if (channelId) {
       params.set('channel_id', channelId.toLowerCase());
     }
-    params.set('skipInitialMessages', 'true');
+
+    if (streamStartTimestampRef.current === null) {
+      streamStartTimestampRef.current = messages[0]?.ingest_timestamp ?? undefined;
+    }
+
+    if (streamStartTimestampRef.current) {
+      params.set('lastTimestamp', streamStartTimestampRef.current);
+    } else {
+      params.set('skipInitialMessages', 'true');
+    }
 
     const eventSource = new EventSource(buildApiUrl(`/api/meshcore/stream/chat?${params.toString()}`));
 
@@ -164,8 +175,9 @@ export function useChatMessages({
 
     return () => {
       eventSource.close();
+      streamStartTimestampRef.current = null;
     };
-  }, [appendStreamMessages, autoRefreshEnabled, channelId, enabled, region]);
+  }, [appendStreamMessages, autoRefreshEnabled, channelId, enabled, loading, region]);
 
   // Flatten all messages from all pages
   const allMessages = messagesQuery.data?.pages.flatMap(page => page.messages) ?? [];

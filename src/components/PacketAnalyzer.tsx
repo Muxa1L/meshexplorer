@@ -743,19 +743,31 @@ export default function PacketAnalyzer() {
     }
   }, [fetchNextPage, hasNextPage, isFetchingNextPage, isLoading]);
 
+  const streamStartTimestampRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (!autoRefresh) {
+    if (!autoRefresh || isLoading) {
       return;
     }
 
     const params = new URLSearchParams({
       pollInterval: '1000',
       maxRows: String(PACKET_PAGE_SIZE),
-      skipInitialMessages: 'true',
     });
     if (filterType !== null) {
       params.set('payloadType', String(filterType));
     }
+
+    if (streamStartTimestampRef.current === null) {
+      streamStartTimestampRef.current = packets[0]?.ingest_timestamp ?? undefined;
+    }
+
+    if (streamStartTimestampRef.current) {
+      params.set('lastTimestamp', streamStartTimestampRef.current);
+    } else {
+      params.set('skipInitialMessages', 'true');
+    }
+
     const eventSource = new EventSource(buildApiUrl(`/api/meshcore/stream/packets?${params.toString()}`));
 
     eventSource.onmessage = (event) => {
@@ -777,8 +789,9 @@ export default function PacketAnalyzer() {
 
     return () => {
       eventSource.close();
+      streamStartTimestampRef.current = null;
     };
-  }, [autoRefresh, filterType, packetsQueryKey, queryClient]);
+  }, [autoRefresh, filterType, packetsQueryKey, queryClient, isLoading]);
 
   const packets = useMemo(() => data?.pages.flatMap((page) => page.packets) ?? [], [data?.pages]);
 
