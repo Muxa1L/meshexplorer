@@ -159,7 +159,7 @@ class StreamCache {
       skipInitialMessages: config.skipInitialMessages
     });
     const paramsKey = JSON.stringify(params);
-    return Buffer.from(`${configKey}::${paramsKey}`).toString('base64').slice(0, 64);
+    return Buffer.from(`${configKey}::${paramsKey}`).toString('base64');
   }
 
   /**

@@ -58,11 +58,12 @@ export async function GET(req: NextRequest) {
   
   const encoder = new TextEncoder();
   
+  let unsubscribe: (() => void) | null = null;
+
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        // Subscribe to the cached stream
-        const unsubscribe = subscribeToStream(config, params, async (result) => {
+        unsubscribe = subscribeToStream(config, params, async (result) => {
           // Check for errors in the result
           if ('error' in result && result.error) {
             const errorData = JSON.stringify({
@@ -76,7 +77,6 @@ export async function GET(req: NextRequest) {
 
           let outputData = result.row;
 
-          // Apply decryption if requested
           if (decrypt && allKeys.length > 0) {
             try {
               const decrypted = await decryptMeshcoreGroupMessage({
@@ -94,7 +94,6 @@ export async function GET(req: NextRequest) {
                 };
               }
             } catch (error) {
-              // Skip messages that fail to decrypt, just send the original
               console.warn("Failed to decrypt streaming message:", error);
             }
           }
@@ -102,13 +101,6 @@ export async function GET(req: NextRequest) {
           const data = JSON.stringify(outputData);
           controller.enqueue(encoder.encode(`data: ${data}\n\n`));
         });
-
-        // Clean up subscription when the connection closes
-        const originalOnClose = controller.close.bind(controller);
-        controller.close = function() {
-          unsubscribe();
-          return originalOnClose();
-        };
       } catch (error) {
         console.error('Meshcore chat streaming error:', error);
         const errorData = JSON.stringify({
@@ -119,6 +111,12 @@ export async function GET(req: NextRequest) {
 
         controller.enqueue(encoder.encode(`event: error\ndata: ${errorData}\n\n`));
         controller.close();
+      }
+    },
+    cancel() {
+      if (unsubscribe) {
+        unsubscribe();
+        unsubscribe = null;
       }
     }
   });

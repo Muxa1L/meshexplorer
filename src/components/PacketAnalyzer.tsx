@@ -108,16 +108,16 @@ function rebuildPacketPages(packets: MeshPacket[], pageSize: number, lastPageHas
 }
 
 function mergeIncomingPacketPages(oldData: any, incomingPackets: MeshPacket[], pageSize: number) {
-  if (!oldData?.pages?.length || incomingPackets.length === 0) {
+  if (incomingPackets.length === 0) {
     return oldData;
   }
 
-  const allExistingPackets = oldData.pages.flatMap((page: PacketPage) => page.packets);
+  const allExistingPackets = oldData?.pages?.flatMap((page: PacketPage) => page.packets) ?? [];
   const mergedPackets = mergeIncomingPackets(allExistingPackets, incomingPackets, Number.MAX_SAFE_INTEGER);
-  const lastPageHasMore = oldData.pages[oldData.pages.length - 1]?.hasMore ?? false;
+  const lastPageHasMore = oldData?.pages?.[oldData.pages.length - 1]?.hasMore ?? false;
 
   return {
-    ...oldData,
+    ...(oldData || {}),
     pages: rebuildPacketPages(mergedPackets, pageSize, lastPageHasMore),
   };
 }

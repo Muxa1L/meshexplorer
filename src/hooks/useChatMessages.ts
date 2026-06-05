@@ -24,11 +24,11 @@ function mergeNewMessages(
   oldData: any,
   incomingMessages: ChatMessage[],
 ) {
-  if (!oldData?.pages?.[0] || incomingMessages.length === 0) {
+  if (incomingMessages.length === 0) {
     return oldData;
   }
 
-  const allExistingMessages = oldData.pages.flatMap((page: any) => page.messages);
+  const allExistingMessages = oldData?.pages?.flatMap((page: any) => page.messages) ?? [];
   const trulyNewMessages: ChatMessage[] = [];
   const updatedExistingMessages = [...allExistingMessages];
 
@@ -48,14 +48,14 @@ function mergeNewMessages(
     .sort((a, b) => new Date(b.ingest_timestamp).getTime() - new Date(a.ingest_timestamp).getTime());
 
   const updatedPages = [];
-  let currentPageMessages = [];
+  let currentPageMessages: ChatMessage[] = [];
 
   for (let index = 0; index < allMessages.length; index += 1) {
     currentPageMessages.push(allMessages[index]);
 
     if (currentPageMessages.length === PAGE_SIZE || index === allMessages.length - 1) {
       updatedPages.push({
-        ...(oldData.pages[Math.floor(index / PAGE_SIZE)] || { hasMore: false }),
+        ...(oldData?.pages?.[Math.floor(index / PAGE_SIZE)] || { hasMore: false }),
         messages: currentPageMessages,
       });
       currentPageMessages = [];
@@ -63,7 +63,7 @@ function mergeNewMessages(
   }
 
   return {
-    ...oldData,
+    ...(oldData || {}),
     pages: updatedPages,
   };
 }

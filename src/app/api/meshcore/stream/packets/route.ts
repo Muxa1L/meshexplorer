@@ -69,12 +69,12 @@ export async function GET(req: NextRequest) {
   
   const encoder = new TextEncoder();
   
+  let unsubscribe: (() => void) | null = null;
+
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        // Subscribe to the cached stream
-        const unsubscribe = subscribeToStream(config, params, async (result) => {
-          // Check for errors in the result
+        unsubscribe = subscribeToStream(config, params, async (result) => {
           if ('error' in result && result.error) {
             const errorData = JSON.stringify({
               type: 'error',
@@ -88,13 +88,6 @@ export async function GET(req: NextRequest) {
           const data = JSON.stringify(result.row);
           controller.enqueue(encoder.encode(`data: ${data}\n\n`));
         });
-
-        // Clean up subscription when the connection closes
-        const originalOnClose = controller.close.bind(controller);
-        controller.close = function() {
-          unsubscribe();
-          return originalOnClose();
-        };
       } catch (error) {
         console.error('Meshcore packets streaming error:', error);
         const errorData = JSON.stringify({
@@ -105,6 +98,12 @@ export async function GET(req: NextRequest) {
 
         controller.enqueue(encoder.encode(`event: error\ndata: ${errorData}\n\n`));
         controller.close();
+      }
+    },
+    cancel() {
+      if (unsubscribe) {
+        unsubscribe();
+        unsubscribe = null;
       }
     }
   });
