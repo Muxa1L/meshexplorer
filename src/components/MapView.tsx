@@ -695,14 +695,39 @@ function LivePacketPropagation({
       return;
     }
 
-    const paneName = 'live-packet-propagation-pane';
-    const regionParam = region ? `&region=${encodeURIComponent(region)}` : '';
-    const streamUrl = buildApiUrl(
-      `/api/meshcore/stream/packets?pollInterval=1000&maxRows=24${regionParam}`,
-    );
-    const eventSource = new EventSource(streamUrl);
+    let cancelled = false;
+    let eventSource: EventSource | null = null;
 
-    eventSource.onmessage = (event) => {
+    (async () => {
+      const paneName = 'live-packet-propagation-pane';
+      const regionParam = region ? `&region=${encodeURIComponent(region)}` : '';
+
+      // Try to fetch the latest packet timestamp so the stream starts after our known history.
+      let lastTimestampParam = '';
+      try {
+        const latestRes = await fetch(buildApiUrl(`/api/packets?limit=1${regionParam}`));
+        if (latestRes.ok) {
+          const latestData = await latestRes.json();
+          // API may return an array or an object with `packets`.
+          const latestPacket = Array.isArray(latestData) ? latestData[0] : (latestData?.packets?.[0] ?? null);
+          const ts = latestPacket?.ingest_timestamp;
+          if (ts) lastTimestampParam = `&lastTimestamp=${encodeURIComponent(ts)}`;
+          else lastTimestampParam = `&skipInitialMessages=true`;
+        } else {
+          lastTimestampParam = `&skipInitialMessages=true`;
+        }
+      } catch (err) {
+        lastTimestampParam = `&skipInitialMessages=true`;
+      }
+
+      if (cancelled) return;
+
+      const streamUrl = buildApiUrl(
+        `/api/meshcore/stream/packets?pollInterval=1000&maxRows=24${regionParam}${lastTimestampParam}`,
+      );
+      eventSource = new EventSource(streamUrl);
+
+      eventSource.onmessage = (event) => {
       const layerGroup = layerGroupRef.current;
       if (!layerGroup) {
         return;
@@ -812,14 +837,16 @@ function LivePacketPropagation({
       } catch (error) {
         console.error('Failed to process live packet propagation event:', error);
       }
-    };
+      };
 
-    eventSource.onerror = () => {
-      // Let EventSource reconnect automatically.
-    };
+      eventSource.onerror = () => {
+        // Let EventSource reconnect automatically.
+      };
+    })();
 
     return () => {
-      eventSource.close();
+      cancelled = true;
+      if (eventSource) eventSource.close();
     };
   }, [enabled, enabledPacketTypeSet, nodes.length, region]);
 
