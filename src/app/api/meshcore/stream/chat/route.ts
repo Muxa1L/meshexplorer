@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
-import { createClickHouseStreamer, createChatMessagesStreamerConfig } from '@/lib/clickhouse/streaming';
+import { createChatMessagesStreamerConfig } from '@/lib/clickhouse/streaming';
+import { subscribeToStream } from '@/lib/clickhouse/stream-cache';
 import { decryptMeshcoreGroupMessage } from '@/lib/meshcore';
 
 export async function GET(req: NextRequest) {
@@ -51,18 +52,28 @@ export async function GET(req: NextRequest) {
   config.maxRowsPerPoll = validMaxRows;
   config.skipInitialMessages = skipInitialMessages;
 
-  const streamer = createClickHouseStreamer(config);
+  // Build parameters object with validated values
+  const params: Record<string, any> = {};
+  if (validChannelId) params.channelId = validChannelId;
   
   const encoder = new TextEncoder();
   
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        // Build parameters object with validated values
-        const params: Record<string, any> = {};
-        if (validChannelId) params.channelId = validChannelId;
+        // Subscribe to the cached stream
+        const unsubscribe = subscribeToStream(config, params, async (result) => {
+          // Check for errors in the result
+          if ('error' in result && result.error) {
+            const errorData = JSON.stringify({
+              type: 'error',
+              message: result.error,
+              timestamp: new Date().toISOString()
+            });
+            controller.enqueue(encoder.encode(`event: error\ndata: ${errorData}\n\n`));
+            return;
+          }
 
-        for await (const result of streamer(params)) {
           let outputData = result.row;
 
           // Apply decryption if requested
@@ -90,7 +101,14 @@ export async function GET(req: NextRequest) {
 
           const data = JSON.stringify(outputData);
           controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-        }
+        });
+
+        // Clean up subscription when the connection closes
+        const originalOnClose = controller.close.bind(controller);
+        controller.close = function() {
+          unsubscribe();
+          return originalOnClose();
+        };
       } catch (error) {
         console.error('Meshcore chat streaming error:', error);
         const errorData = JSON.stringify({
@@ -100,7 +118,6 @@ export async function GET(req: NextRequest) {
         });
 
         controller.enqueue(encoder.encode(`event: error\ndata: ${errorData}\n\n`));
-      } finally {
         controller.close();
       }
     }

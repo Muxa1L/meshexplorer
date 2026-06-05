@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
-import { createClickHouseStreamer, createMeshcorePacketsStreamerConfig } from '@/lib/clickhouse/streaming';
+import { createMeshcorePacketsStreamerConfig } from '@/lib/clickhouse/streaming';
+import { subscribeToStream } from '@/lib/clickhouse/stream-cache';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -60,24 +61,40 @@ export async function GET(req: NextRequest) {
   config.maxRowsPerPoll = validMaxRows;
   config.skipInitialMessages = skipInitialMessages;
 
-  const streamer = createClickHouseStreamer(config);
+  // Build parameters object with validated values
+  const params: Record<string, any> = {};
+  if (validPayloadType !== undefined) params.payloadType = validPayloadType;
+  if (validRouteType !== undefined) params.routeType = validRouteType;
+  if (validOriginPubkey) params.originPubkey = validOriginPubkey;
   
   const encoder = new TextEncoder();
   
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        // Build parameters object with validated values
-        const params: Record<string, any> = {};
-        if (validPayloadType !== undefined) params.payloadType = validPayloadType;
-        if (validRouteType !== undefined) params.routeType = validRouteType;
-        if (validOriginPubkey) params.originPubkey = validOriginPubkey;
+        // Subscribe to the cached stream
+        const unsubscribe = subscribeToStream(config, params, async (result) => {
+          // Check for errors in the result
+          if ('error' in result && result.error) {
+            const errorData = JSON.stringify({
+              type: 'error',
+              message: result.error,
+              timestamp: new Date().toISOString()
+            });
+            controller.enqueue(encoder.encode(`event: error\ndata: ${errorData}\n\n`));
+            return;
+          }
 
-        for await (const result of streamer(params)) {
           const data = JSON.stringify(result.row);
-
           controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-        }
+        });
+
+        // Clean up subscription when the connection closes
+        const originalOnClose = controller.close.bind(controller);
+        controller.close = function() {
+          unsubscribe();
+          return originalOnClose();
+        };
       } catch (error) {
         console.error('Meshcore packets streaming error:', error);
         const errorData = JSON.stringify({
@@ -87,7 +104,6 @@ export async function GET(req: NextRequest) {
         });
 
         controller.enqueue(encoder.encode(`event: error\ndata: ${errorData}\n\n`));
-      } finally {
         controller.close();
       }
     }
