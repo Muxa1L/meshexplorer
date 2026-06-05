@@ -131,7 +131,7 @@ export function useChatMessages({
     queryClient.setQueryData(baseQueryKey, (oldData: any) => mergeNewMessages(oldData, incomingMessages));
   }, [baseQueryKey, queryClient]);
 
-  const streamStartTimestampRef = useRef<string | null>(null);
+  const streamStartAfterTimestampRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!enabled || !autoRefreshEnabled || !region || loading) {
@@ -147,12 +147,13 @@ export function useChatMessages({
       params.set('channel_id', channelId.toLowerCase());
     }
 
-    if (streamStartTimestampRef.current === null) {
-      streamStartTimestampRef.current = allMessages[0]?.ingest_timestamp ?? undefined;
+    // Use the newest loaded message timestamp so stream only requests messages newer than our current history.
+    if (streamStartAfterTimestampRef.current === null) {
+      streamStartAfterTimestampRef.current = allMessages[0]?.ingest_timestamp ?? undefined;
     }
 
-    if (streamStartTimestampRef.current) {
-      params.set('lastTimestamp', streamStartTimestampRef.current);
+    if (streamStartAfterTimestampRef.current) {
+      params.set('lastTimestamp', streamStartAfterTimestampRef.current);
     } else {
       params.set('skipInitialMessages', 'true');
     }
@@ -178,7 +179,7 @@ export function useChatMessages({
 
     return () => {
       eventSource.close();
-      streamStartTimestampRef.current = null;
+      streamStartAfterTimestampRef.current = null;
     };
   }, [appendStreamMessages, allMessages, autoRefreshEnabled, channelId, enabled, loading, region]);
   
