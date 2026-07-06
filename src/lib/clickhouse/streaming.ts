@@ -265,7 +265,8 @@ export function createChatMessagesStreamerConfig(
         hex(encrypted_message) AS encrypted_message,
         message_count,
         origin_path_info,
-        message_id
+        message_id,
+        transport_code
       FROM meshcore_public_channel_messages 
       WHERE ingest_timestamp > {lastTimestamp:DateTime64}
       ORDER BY ingest_timestamp ASC

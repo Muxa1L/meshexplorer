@@ -124,6 +124,9 @@ export const enMessages = {
     addChannelKey: "Add Channel Key",
     keyValidation: "Key must be 16 bytes, in base64 or hex (32 hex digits)",
     forever: "Forever (all time)",
+    meshcoreRegions: "MeshCore Regions",
+    meshcoreRegionsHelp: "Comma-separated list of MeshCore region names to detect on messages (e.g. ru,ru-kda,ru-kda-krd)",
+    meshcoreRegionsPlaceholder: "ru,ru-kda,ru-kda-krd",
   },
   infoModal: {
     title: "About {appName}",

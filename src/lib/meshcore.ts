@@ -226,4 +226,96 @@ export function formatPublicKey(pubKey: string): string {
     // Take the first 8 characters, add ellipsis, and then the last 8 characters
     const formattedKey = `<${pubKey.slice(0, 8)}...${pubKey.slice(-8)}>`;
     return formattedKey;
+}
+
+// Cache for computed region transport keys: regionName -> 16-byte key
+const regionKeyCache: Record<string, Uint8Array> = {};
+
+/**
+ * Derives the 16-byte transport key for a MeshCore region.
+ * Key = SHA256("#" + regionName), first 16 bytes.
+ * Matches TransportKeyStore::getAutoKeyFor in MeshCore firmware.
+ */
+async function getRegionTransportKey(regionName: string): Promise<Uint8Array> {
+  if (regionKeyCache[regionName]) return regionKeyCache[regionName];
+
+  const nameWithHash = '#' + regionName;
+  const nameBytes = new TextEncoder().encode(nameWithHash);
+
+  let hashBytes: Uint8Array;
+  if (typeof window !== 'undefined' && window.crypto?.subtle) {
+    const digest = await window.crypto.subtle.digest('SHA-256', nameBytes);
+    hashBytes = new Uint8Array(digest);
+  } else {
+    hashBytes = new Uint8Array(createHash('sha256').update(Buffer.from(nameBytes)).digest());
+  }
+
+  const key = hashBytes.slice(0, 16);
+  regionKeyCache[regionName] = key;
+  return key;
+}
+
+/**
+ * Computes the expected MeshCore transport code for a given region and payload.
+ *
+ * Algorithm (matches TransportKey::calcTransportCode in MeshCore firmware):
+ *   HMAC-SHA256(key, [payloadType, ...payloadBytes]) → first 2 bytes as little-endian uint16
+ *   where key = SHA256("#" + regionName).slice(0, 16)
+ *
+ * @param regionName  MeshCore region name, e.g. "ru", "ru-kda"
+ * @param payloadType Packet payload type byte (5 = PAYLOAD_TYPE_GRP_TXT)
+ * @param payloadHex  Full payload as hex string: channel_hash + mac + encrypted_message
+ */
+export async function computeRegionTransportCode(
+  regionName: string,
+  payloadType: number,
+  payloadHex: string,
+): Promise<number> {
+  const key = await getRegionTransportKey(regionName);
+  const payloadBytes = hexToBytes(payloadHex);
+
+  // HMAC input: [payloadType byte] || payload bytes
+  const hmacInput = new Uint8Array(1 + payloadBytes.length);
+  hmacInput[0] = payloadType & 0xff;
+  hmacInput.set(payloadBytes, 1);
+
+  const hmacResult = await hmacSha256(key, hmacInput);
+
+  // First 2 bytes as little-endian uint16
+  let code = (hmacResult[0] | (hmacResult[1] << 8)) >>> 0;
+  code = code & 0xffff;
+
+  // Reserve 0x0000 and 0xFFFF (matches firmware edge-case handling)
+  if (code === 0) code = 1;
+  if (code === 0xffff) code = 0xfffe;
+
+  return code;
+}
+
+/**
+ * Detects which MeshCore region a message was sent to by matching its transport code.
+ * A transport_code of 0 means the packet used plain flood routing (no transport codes present).
+ *
+ * @param transportCode  The transport_code value from the packet (uint16, 0 if not a transport packet)
+ * @param payloadHex     Full payload hex: channel_hash + mac + encrypted_message
+ * @param regionNames    Ordered list of region names to check (e.g. ["ru-kda-krd", "ru-kda", "ru"])
+ * @returns              The first matching region name, or null if no match
+ */
+export async function detectMessageRegion(
+  transportCode: number,
+  payloadHex: string,
+  regionNames: string[],
+): Promise<string | null> {
+  if (!transportCode || regionNames.length === 0) {
+    return null;
+  }
+
+  // PAYLOAD_TYPE_GRP_TXT = 5
+  const PAYLOAD_TYPE = 5;
+
+  for (const name of regionNames) {
+    const expected = await computeRegionTransportCode(name, PAYLOAD_TYPE, payloadHex);
+    if (expected === transportCode) return name;
+  }
+  return null;
 } 

@@ -124,6 +124,9 @@ export const ruMessages = {
     addChannelKey: "Добавить ключ канала",
     keyValidation: "Ключ должен содержать 16 байт в формате base64 или hex (32 hex-символа)",
     forever: "За всё время",
+    meshcoreRegions: "Регионы MeshCore",
+    meshcoreRegionsHelp: "Список регионов MeshCore через запятую для отображения на сообщениях (например: ru,ru-kda,ru-kda-krd)",
+    meshcoreRegionsPlaceholder: "ru,ru-kda,ru-kda-krd",
   },
   infoModal: {
     title: "О {appName}",

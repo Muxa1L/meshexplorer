@@ -15,6 +15,7 @@ export type Config = {
   lastSeen: number | null; // seconds, or null for forever
   meshcoreKeys?: MeshcoreKey[]; // meshcore private keys
   selectedRegion?: string; // selected region for chat messages
+  meshcoreRegions?: string[]; // MeshCore protocol region names for transport code detection
 };
 
 
@@ -22,6 +23,7 @@ const DEFAULT_CONFIG: Config = {
   lastSeen: 604800, // 1 week by default
   meshcoreKeys: [], // default empty
   selectedRegion: undefined, // no region selected by default
+  meshcoreRegions: ['ru', 'ru-kda', 'ru-kda-krd'],
 };
 
 export const LAST_SEEN_OPTIONS = [
@@ -153,6 +155,23 @@ function ConfigPopover({ config, setConfig, onClose, anchorRef, onOpenKeyModal }
         <p className="text-xs text-gray-500 mt-1">
           {t("config.regionHelp")}
         </p>
+      </div>
+      <div className="mb-4">
+        <div className="font-medium mb-1">{t("config.meshcoreRegions")}</div>
+        <input
+          type="text"
+          className="w-full p-2 border rounded font-mono text-sm"
+          placeholder={t("config.meshcoreRegionsPlaceholder")}
+          value={(config.meshcoreRegions ?? ['ru', 'ru-kda', 'ru-kda-krd']).join(',')}
+          onChange={e => {
+            const regions = e.target.value
+              .split(',')
+              .map(r => r.trim().toLowerCase().replace(/[^a-z0-9-]/g, ''))
+              .filter(Boolean);
+            setConfig({ ...config, meshcoreRegions: regions });
+          }}
+        />
+        <p className="text-xs text-gray-500 mt-1">{t("config.meshcoreRegionsHelp")}</p>
       </div>
       <div className="mb-2">
         <button

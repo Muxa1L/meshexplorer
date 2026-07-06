@@ -298,7 +298,8 @@ SELECT
 	substring(payload, 3, 4) as mac,
 	unhex(substring(payload, 7)) as encrypted_message,
 	count(*) AS message_count,
-	groupArray(tuple(origin, hex(origin_pubkey), hex(path), broker, topic)) as origin_path_info
+	groupArray(tuple(origin, hex(origin_pubkey), hex(path), broker, topic)) as origin_path_info,
+	anyIf(reinterpretAsUInt16(substring(packet, 2, 2)), route_type IN (0, 3)) as transport_code
 FROM
 	meshcore_packets
 WHERE

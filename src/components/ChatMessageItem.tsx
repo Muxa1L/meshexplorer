@@ -1,5 +1,5 @@
 "use client";
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect, useState } from "react";
 import { useConfig } from "./ConfigContext";
 import { useMessageDecryption } from "@/hooks/useMessageDecryption";
 import PathVisualization from "./PathVisualization";
@@ -7,6 +7,7 @@ import { PathData } from "@/lib/pathUtils";
 import NodeLinkWithHover from "./NodeLinkWithHover";
 import { findNodeMentions } from "@/lib/node-utils";
 import { useLocale } from "./LocaleProvider";
+import { detectMessageRegion } from "@/lib/meshcore";
 
 export interface ChatMessage {
   message_id: string;
@@ -19,6 +20,7 @@ export interface ChatMessage {
   encrypted_message: string;
   message_count: number;
   origin_path_info: Array<[string, string, string, number, string, string]>; // Array of [origin, origin_pubkey, path, path_len, broker, topic] tuples
+  transport_code: number;
 }
 
 interface ChatMessageItemProps {
@@ -134,6 +136,31 @@ function ChatMessageItem({ msg, showErrorRow, variant = "default" }: ChatMessage
     "izOH6cXN6mrJ5e26oRXNcg==", // Always include public key
   ], [config?.meshcoreKeys]);
 
+  const [detectedRegion, setDetectedRegion] = useState<string | null>(null);
+
+  const meshcoreRegions: string[] = useMemo(
+    () => config?.meshcoreRegions ?? ['ru', 'ru-kda', 'ru-kda-krd'],
+    [config?.meshcoreRegions],
+  );
+
+  // Full payload hex for transport code matching: channel_hash + mac + encrypted_message
+  const payloadHex = useMemo(
+    () => msg.channel_hash + msg.mac + msg.encrypted_message,
+    [msg.channel_hash, msg.mac, msg.encrypted_message],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    detectMessageRegion(
+      msg.transport_code,
+      payloadHex,
+      meshcoreRegions,
+    ).then(region => {
+      if (!cancelled) setDetectedRegion(region);
+    });
+    return () => { cancelled = true; };
+  }, [msg.transport_code, payloadHex, meshcoreRegions]);
+
   const { data: decryptionResult, isLoading } = useMessageDecryption({
     encrypted_message: msg.encrypted_message,
     mac: msg.mac,
@@ -196,6 +223,11 @@ function ChatMessageItem({ msg, showErrorRow, variant = "default" }: ChatMessage
               
               {!isChannelVariant && <span className="text-xs text-gray-500">{t("chatMessage.type")}: {parsed.msgType}</span>}
               {!isChannelVariant && <span className="text-xs text-gray-500 ml-2">{t("chatMessage.channel")}: {msg.channel_hash}</span>}
+              {detectedRegion && (
+                <span className="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 ring-1 ring-inset ring-indigo-200 dark:ring-indigo-700">
+                  {detectedRegion}
+                </span>
+              )}
               <div className="break-words whitespace-pre-wrap leading-6 text-gray-800 dark:text-gray-100">
                 {!isChannelVariant && parsed.sender && ": "}
                 <ChatMessageContent text={parsed.text} />
@@ -228,6 +260,11 @@ function ChatMessageItem({ msg, showErrorRow, variant = "default" }: ChatMessage
                 {isChannelVariant ? formatTimeOnly(msg.ingest_timestamp, locale) : formatLocalTime(msg.ingest_timestamp)}
               </span>
               {!isChannelVariant && <span className="text-xs text-gray-500 ml-2">{t("chatMessage.channel")}: {msg.channel_hash}</span>}
+              {detectedRegion && (
+                <span className="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 ring-1 ring-inset ring-indigo-200 dark:ring-indigo-700">
+                  {detectedRegion}
+                </span>
+              )}
             </div>
             <div className={isChannelVariant ? "rounded-[24px] rounded-tl-md border border-red-200/80 bg-red-50/95 p-4 shadow-sm dark:border-red-900/70 dark:bg-red-950/40" : ""}>
               <div className="text-xs text-red-600 dark:text-red-300">
@@ -295,6 +332,7 @@ export default React.memo(ChatMessageItem, (prevProps, nextProps) => {
     prevProps.msg.encrypted_message === nextProps.msg.encrypted_message &&
     prevProps.msg.mac === nextProps.msg.mac &&
     prevProps.msg.channel_hash === nextProps.msg.channel_hash &&
+    prevProps.msg.transport_code === nextProps.msg.transport_code &&
     prevProps.msg.origin_path_info?.length === nextProps.msg.origin_path_info?.length &&
     prevProps.showErrorRow === nextProps.showErrorRow
   );
