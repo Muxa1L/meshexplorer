@@ -20,6 +20,7 @@ export interface ChatMessage {
   channel_hash: string;
   mac: string;
   encrypted_message: string;
+  payload_type: number;
   message_count: number;
   origin_path_info: Array<[string, string, string, number, string, string]>; // Array of [origin, origin_pubkey, path, path_len, broker, topic] tuples
   transport_code: number;
@@ -241,17 +242,19 @@ function ChatMessageItem({ msg, showErrorRow, variant = "default" }: ChatMessage
       msg.transport_code,
       payloadHex,
       meshcoreRegions,
+      msg.payload_type,
     ).then(region => {
       if (!cancelled) setDetectedRegion(region);
     });
     return () => { cancelled = true; };
-  }, [msg.transport_code, payloadHex, meshcoreRegions]);
+  }, [msg.payload_type, msg.transport_code, payloadHex, meshcoreRegions]);
 
   const { data: decryptionResult, isLoading } = useMessageDecryption({
     encrypted_message: msg.encrypted_message,
     mac: msg.mac,
     channel_hash: msg.channel_hash,
     knownKeys,
+    payload_type: msg.payload_type,
     parse: true,
   });
 
@@ -276,7 +279,7 @@ function ChatMessageItem({ msg, showErrorRow, variant = "default" }: ChatMessage
 
   const isChannelVariant = variant === "channel";
 
-  if (parsed) {
+  if (parsed?.kind === "text") {
     const messageTimestamp = new Date(parsed.timestamp * 1000).toISOString();
     const senderLabel = parsed.sender || msg.channel_hash;
 
@@ -325,6 +328,56 @@ function ChatMessageItem({ msg, showErrorRow, variant = "default" }: ChatMessage
             <div className={isChannelVariant ? "mt-3 border-t border-gray-100 pt-3 dark:border-neutral-800" : ""}>
               <PathVisualization 
                 paths={pathData} 
+                title={t("chatMessage.heardRepeats", { count: pathData.length })}
+                className="text-xs"
+                packetHash={msg.message_id}
+                channelHash={msg.channel_hash}
+              />
+            </div>
+          </div>
+        </div>
+      </article>
+    );
+  }
+
+  if (parsed?.kind === "mcoimg") {
+    const messageTimestamp = msg.mesh_timestamp || msg.ingest_timestamp;
+    const senderLabel = parsed.sender || msg.channel_hash;
+
+    return (
+      <article className={isChannelVariant ? "group flex gap-3 rounded-[26px] px-1 py-2" : "border-b border-gray-200 pb-2 mb-2 dark:border-neutral-800"}>
+        <div className="min-w-0 flex-1">
+          <div className={isChannelVariant ? "rounded-[24px] rounded-tl-md border border-gray-200/80 bg-white/95 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/95" : "break-words whitespace-pre-wrap"}>
+            <div className={isChannelVariant ? "mb-2 flex flex-wrap items-center gap-x-2 gap-y-1" : "text-xs text-gray-400 flex items-center gap-2"}>
+              <span className={isChannelVariant ? "text-xs text-gray-500 dark:text-gray-400" : "text-xs text-gray-500"}>
+                {isChannelVariant ? formatTimeOnly(messageTimestamp, locale) : formatLocalTime(messageTimestamp)}
+              </span>
+              {parsed.sender ? (
+                <NodeLinkWithHover
+                  nodeName={parsed.sender}
+                  exact={true}
+                >
+                  <span className={isChannelVariant ? "font-semibold text-gray-900 dark:text-white" : ""}>{parsed.sender}</span>
+                </NodeLinkWithHover>
+              ) : (
+                isChannelVariant ? <span className="font-semibold text-gray-900 dark:text-white">{senderLabel}</span> : null
+              )}
+              {!isChannelVariant && <span className="text-xs text-gray-500 ml-2">GRP_DATA</span>}
+              {!isChannelVariant && <span className="text-xs text-gray-500 ml-2">{t("chatMessage.channel")}: {msg.channel_hash}</span>}
+              {detectedRegion && (
+                <span className="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 ring-1 ring-inset ring-indigo-200 dark:ring-indigo-700">
+                  {detectedRegion}
+                </span>
+              )}
+            </div>
+
+            <div className={isChannelVariant ? "" : "mt-1"}>
+              <McoImageAttachment payload={parsed.payload} input="binary" />
+            </div>
+
+            <div className={isChannelVariant ? "mt-3 border-t border-gray-100 pt-3 dark:border-neutral-800" : ""}>
+              <PathVisualization
+                paths={pathData}
                 title={t("chatMessage.heardRepeats", { count: pathData.length })}
                 className="text-xs"
                 packetHash={msg.message_id}
@@ -420,6 +473,7 @@ export default React.memo(ChatMessageItem, (prevProps, nextProps) => {
     prevProps.msg.encrypted_message === nextProps.msg.encrypted_message &&
     prevProps.msg.mac === nextProps.msg.mac &&
     prevProps.msg.channel_hash === nextProps.msg.channel_hash &&
+    prevProps.msg.payload_type === nextProps.msg.payload_type &&
     prevProps.msg.transport_code === nextProps.msg.transport_code &&
     prevProps.msg.origin_path_info?.length === nextProps.msg.origin_path_info?.length &&
     prevProps.showErrorRow === nextProps.showErrorRow

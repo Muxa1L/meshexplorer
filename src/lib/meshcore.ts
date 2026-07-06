@@ -30,7 +30,7 @@ export function deriveKeyFromChannelName(channelName: string): string {
 const channelIdCache: Record<string, string> = {};
 
 // Helper: Convert hex string to Uint8Array
-function hexToBytes(hex: string): Uint8Array {
+export function hexToBytes(hex: string): Uint8Array {
   if (hex.startsWith("0x")) hex = hex.slice(2);
   if (hex.length % 2 !== 0) hex = "0" + hex;
   const bytes = new Uint8Array(hex.length / 2);
@@ -144,21 +144,17 @@ export function parseMeshcoreGroupMessage(decrypted: Uint8Array | string): {
   return { timestamp, msgType, sender, text, rawText };
 }
 
-// Main decryption function
-export async function decryptMeshcoreGroupMessage({
-  encrypted_message, // hex string or Uint8Array
-  mac, // hex string or Uint8Array (2 bytes)
-  channel_hash, // hex string (1 byte)
-  knownKeys, // array of base64 strings
-  parse = false,
+export async function decryptMeshcoreGroupPayload({
+  encrypted_message,
+  mac,
+  channel_hash,
+  knownKeys,
 }: {
   encrypted_message: string | Uint8Array,
   mac: string | Uint8Array,
   channel_hash: string,
   knownKeys: string[],
-  parse?: boolean,
-}): Promise<string | ReturnType<typeof parseMeshcoreGroupMessage> | null> {
-  // Normalize inputs
+}): Promise<Uint8Array | null> {
   const ciphertext = typeof encrypted_message === "string" ? hexToBytes(encrypted_message) : encrypted_message;
   const macBytes = typeof mac === "string" ? hexToBytes(mac) : mac;
   const chash = channel_hash.toLowerCase();
@@ -180,7 +176,6 @@ export async function decryptMeshcoreGroupMessage({
       continue;
     }
 
-    // MAC check
     let hmac;
     try {
       hmac = await hmacSha256(keyBytes, ciphertext);
@@ -193,33 +188,60 @@ export async function decryptMeshcoreGroupMessage({
       continue;
     }
 
-    // AES-128-ECB decrypt
     try {
       const aesEcb = new aesjs.ModeOfOperation.ecb(keyBytes);
       const decrypted = aesEcb.decrypt(ciphertext);
-      // Remove trailing nulls/zeros
       let end = decrypted.length;
       while (end > 0 && decrypted[end - 1] === 0) end--;
-      const plainBytes = decrypted.slice(0, end);
-      if (parse) {
-        return parseMeshcoreGroupMessage(plainBytes);
-      } else {
-        return new TextDecoder().decode(plainBytes);
-      }
+      return decrypted.slice(0, end);
     } catch (e) {
       failures.push({ key: base64Key, reason: `AES decryption error: ${e}` });
       continue;
     }
   }
+
   if (failures.length > 0) {
-    console.info("Meshcore decryption failed for message", {
+    console.info("Meshcore decryption failed for payload", {
       channel_hash: chash,
       mac: Array.from(macBytes).map(b=>b.toString(16).padStart(2,'0')).join(''),
       knownKeysTried: knownKeys,
       failures,
     });
   }
+
   return null;
+}
+
+// Main decryption function
+export async function decryptMeshcoreGroupMessage({
+  encrypted_message, // hex string or Uint8Array
+  mac, // hex string or Uint8Array (2 bytes)
+  channel_hash, // hex string (1 byte)
+  knownKeys, // array of base64 strings
+  parse = false,
+}: {
+  encrypted_message: string | Uint8Array,
+  mac: string | Uint8Array,
+  channel_hash: string,
+  knownKeys: string[],
+  parse?: boolean,
+}): Promise<string | ReturnType<typeof parseMeshcoreGroupMessage> | null> {
+  const plainBytes = await decryptMeshcoreGroupPayload({
+    encrypted_message,
+    mac,
+    channel_hash,
+    knownKeys,
+  });
+
+  if (plainBytes === null) {
+    return null;
+  }
+
+  if (parse) {
+    return parseMeshcoreGroupMessage(plainBytes);
+  }
+
+  return new TextDecoder().decode(plainBytes);
 } 
 
 export function formatPublicKey(pubKey: string): string {
@@ -305,16 +327,14 @@ export async function detectMessageRegion(
   transportCode: number,
   payloadHex: string,
   regionNames: string[],
+  payloadType: number = 5,
 ): Promise<string | null> {
   if (!transportCode || regionNames.length === 0) {
     return null;
   }
 
-  // PAYLOAD_TYPE_GRP_TXT = 5
-  const PAYLOAD_TYPE = 5;
-
   for (const name of regionNames) {
-    const expected = await computeRegionTransportCode(name, PAYLOAD_TYPE, payloadHex);
+    const expected = await computeRegionTransportCode(name, payloadType, payloadHex);
     if (expected === transportCode) return name;
   }
   return null;

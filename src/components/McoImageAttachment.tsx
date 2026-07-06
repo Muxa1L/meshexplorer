@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { ensureMcoImgBrowserLoaded } from "@/lib/mcoimg";
 
 interface McoImageAttachmentProps {
-  payload: string;
+  payload: string | Uint8Array;
+  input?: "auto" | "text" | "binary" | "png";
 }
 
 interface ImageSize {
@@ -20,7 +21,7 @@ function preferredDisplayWidth(size: ImageSize | null): number {
   return Math.min(Math.max(size.width * 8, 96), 320);
 }
 
-export default function McoImageAttachment({ payload }: McoImageAttachmentProps) {
+export default function McoImageAttachment({ payload, input = "auto" }: McoImageAttachmentProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [size, setSize] = useState<ImageSize | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -37,7 +38,7 @@ export default function McoImageAttachment({ payload }: McoImageAttachmentProps)
       try {
         const runtime = await ensureMcoImgBrowserLoaded();
         const pngBytes = await runtime.convertPayload(payload, {
-          input: "text",
+          input,
           output: "png",
         });
 
@@ -71,13 +72,15 @@ export default function McoImageAttachment({ payload }: McoImageAttachmentProps)
     return () => {
       cancelled = true;
     };
-  }, [payload]);
+  }, [input, payload]);
 
   if (hasError) {
     return (
       <div className="rounded-2xl border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
         <div className="font-medium">Image decode failed</div>
-        <div className="mt-1 break-all font-mono text-[11px] opacity-80">{payload}</div>
+        <div className="mt-1 break-all font-mono text-[11px] opacity-80">
+          {typeof payload === "string" ? payload : `${payload.length} bytes`}
+        </div>
       </div>
     );
   }

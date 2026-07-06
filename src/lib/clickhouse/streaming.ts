@@ -263,11 +263,27 @@ export function createChatMessagesStreamerConfig(
         channel_hash,
         mac,
         hex(encrypted_message) AS encrypted_message,
+        payload_type,
         message_count,
         origin_path_info,
         message_id,
         transport_code
-      FROM meshcore_public_channel_messages 
+      FROM (
+        SELECT
+          message_hash AS message_id,
+          min(ingest_timestamp) AS ingest_timestamp,
+          min(mesh_timestamp) AS mesh_timestamp,
+          substring(min(hex(payload)), 1, 2) AS channel_hash,
+          substring(min(hex(payload)), 3, 4) AS mac,
+          unhex(substring(min(hex(payload)), 7)) AS encrypted_message,
+          any(payload_type) AS payload_type,
+          count(*) AS message_count,
+          groupArray(tuple(origin, hex(origin_pubkey), hex(path), path_len, broker, topic)) AS origin_path_info,
+          anyIf(reinterpretAsUInt16(substring(packet, 2, 2)), route_type IN (0, 3)) AS transport_code
+        FROM meshcore_packets
+        WHERE payload_type IN (5, 6)
+        GROUP BY message_hash
+      )
       WHERE ingest_timestamp > {lastTimestamp:DateTime64}
       ORDER BY ingest_timestamp ASC
       LIMIT {maxRows:UInt32}

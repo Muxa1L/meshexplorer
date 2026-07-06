@@ -131,12 +131,14 @@ CREATE TABLE meshcore_public_channel_messages (
     channel_hash String,                 -- Channel identifier hash
     mac String,                          -- Message authentication code
     encrypted_message String,            -- Encrypted content (hex)
+    payload_type UInt8,                  -- 0x05 GRP_TXT or 0x06 GRP_DATA
     message_count UInt32,                -- Sequence number
     message_id String,                   -- Unique message ID
     origin_path_info Array(Tuple(        -- Array of routing info
         origin String,
         origin_pubkey String,
         path String,
+        path_len UInt8,
         broker String,
         topic String
     )),
@@ -148,6 +150,7 @@ ORDER BY (channel_hash, ingest_timestamp);
 
 **Use Cases**:
 - Chat message streaming
+- MCOimg image messages over GRP_DATA / MCO Advanced app data
 - Channel activity monitoring
 - Message deduplication
 - Multi-path message tracking

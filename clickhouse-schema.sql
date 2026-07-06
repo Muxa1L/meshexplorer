@@ -293,17 +293,18 @@ SELECT
 	message_hash as message_id,
 	MIN (ingest_timestamp) as ingest_timestamp,
 	MIN (mesh_timestamp) as mesh_timestamp,
-	MIN(hex(payload)) as payload,
-	substring(payload, 1, 2) as channel_hash,
-	substring(payload, 3, 4) as mac,
-	unhex(substring(payload, 7)) as encrypted_message,
+    MIN(hex(payload)) as payload,
+    substring(payload, 1, 2) as channel_hash,
+    substring(payload, 3, 4) as mac,
+    unhex(substring(payload, 7)) as encrypted_message,
+    any(payload_type) as payload_type,
 	count(*) AS message_count,
-	groupArray(tuple(origin, hex(origin_pubkey), hex(path), broker, topic)) as origin_path_info,
+    groupArray(tuple(origin, hex(origin_pubkey), hex(path), path_len, broker, topic)) as origin_path_info,
 	anyIf(reinterpretAsUInt16(substring(packet, 2, 2)), route_type IN (0, 3)) as transport_code
 FROM
-	meshcore_packets
+	meshcore_packets AS packets
 WHERE
-	payload_type = 5
+    packets.payload_type IN (5, 6)
 GROUP BY
 	message_hash ;
 
