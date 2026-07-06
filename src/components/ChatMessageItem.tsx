@@ -8,6 +8,8 @@ import NodeLinkWithHover from "./NodeLinkWithHover";
 import { findNodeMentions } from "@/lib/node-utils";
 import { useLocale } from "./LocaleProvider";
 import { detectMessageRegion } from "@/lib/meshcore";
+import McoImageAttachment from "./McoImageAttachment";
+import { isMcoImagePayload } from "@/lib/mcoimg";
 
 export interface ChatMessage {
   message_id: string;
@@ -128,6 +130,72 @@ function ChatMessageContent({ text }: { text: string }) {
   );
 }
 
+type MessageBlock =
+  | { type: "text"; text: string }
+  | { type: "image"; payload: string };
+
+function splitMessageBlocks(text: string): MessageBlock[] {
+  const lines = text.split(/\r?\n/);
+  const blocks: MessageBlock[] = [];
+  let textBuffer: string[] = [];
+
+  const flushText = () => {
+    if (textBuffer.length === 0) {
+      return;
+    }
+
+    blocks.push({ type: "text", text: textBuffer.join("\n") });
+    textBuffer = [];
+  };
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    if (trimmed && isMcoImagePayload(trimmed)) {
+      flushText();
+      blocks.push({ type: "image", payload: trimmed });
+      continue;
+    }
+
+    textBuffer.push(line);
+  }
+
+  flushText();
+
+  return blocks.length > 0 ? blocks : [{ type: "text", text }];
+}
+
+function ChatMessageBody({
+  text,
+  senderPrefix,
+}: {
+  text: string;
+  senderPrefix?: string;
+}) {
+  const blocks = useMemo(() => splitMessageBlocks(text), [text]);
+
+  return (
+    <div className="space-y-3">
+      {blocks.map((block, index) => {
+        if (block.type === "image") {
+          return <McoImageAttachment key={`${block.payload}-${index}`} payload={block.payload} />;
+        }
+
+        if (block.text.length === 0 && blocks.length > 1) {
+          return <div key={`text-${index}`} className="h-0" aria-hidden="true" />;
+        }
+
+        return (
+          <div key={`text-${index}`} className="break-words whitespace-pre-wrap leading-6 text-gray-800 dark:text-gray-100">
+            {index === 0 && senderPrefix ? senderPrefix : null}
+            <ChatMessageContent text={block.text} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function ChatMessageItem({ msg, showErrorRow, variant = "default" }: ChatMessageItemProps) {
   const { config } = useConfig();
   const { locale, t } = useLocale();
@@ -228,10 +296,12 @@ function ChatMessageItem({ msg, showErrorRow, variant = "default" }: ChatMessage
                   {detectedRegion}
                 </span>
               )}
-              <div className="break-words whitespace-pre-wrap leading-6 text-gray-800 dark:text-gray-100">
-                {!isChannelVariant && parsed.sender && ": "}
-                <ChatMessageContent text={parsed.text} />
-              </div>
+            </div>
+            <div className={isChannelVariant ? "" : "mt-1"}>
+              <ChatMessageBody
+                text={parsed.text}
+                senderPrefix={!isChannelVariant && parsed.sender ? ": " : undefined}
+              />
             </div>
             
             <div className={isChannelVariant ? "mt-3 border-t border-gray-100 pt-3 dark:border-neutral-800" : ""}>
