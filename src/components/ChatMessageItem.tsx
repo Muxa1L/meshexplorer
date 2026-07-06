@@ -134,35 +134,36 @@ type MessageBlock =
   | { type: "text"; text: string }
   | { type: "image"; payload: string };
 
-function splitMessageBlocks(text: string): MessageBlock[] {
-  const lines = text.split(/\r?\n/);
-  const blocks: MessageBlock[] = [];
-  let textBuffer: string[] = [];
+function splitMessageBlocks(text: string): MessageBlock[][] {
+  const payloadPattern = /(?:im3|im):\S+/gi;
 
-  const flushText = () => {
-    if (textBuffer.length === 0) {
-      return;
+  return text.split(/\r?\n/).map((line) => {
+    const blocks: MessageBlock[] = [];
+    let lastIndex = 0;
+
+    for (const match of line.matchAll(payloadPattern)) {
+      const payload = match[0];
+      const start = match.index ?? 0;
+
+      if (start > lastIndex) {
+        blocks.push({ type: "text", text: line.slice(lastIndex, start) });
+      }
+
+      if (isMcoImagePayload(payload)) {
+        blocks.push({ type: "image", payload });
+      } else {
+        blocks.push({ type: "text", text: payload });
+      }
+
+      lastIndex = start + payload.length;
     }
 
-    blocks.push({ type: "text", text: textBuffer.join("\n") });
-    textBuffer = [];
-  };
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-
-    if (trimmed && isMcoImagePayload(trimmed)) {
-      flushText();
-      blocks.push({ type: "image", payload: trimmed });
-      continue;
+    if (lastIndex < line.length) {
+      blocks.push({ type: "text", text: line.slice(lastIndex) });
     }
 
-    textBuffer.push(line);
-  }
-
-  flushText();
-
-  return blocks.length > 0 ? blocks : [{ type: "text", text }];
+    return blocks.length > 0 ? blocks : [{ type: "text", text: line }];
+  });
 }
 
 function ChatMessageBody({
@@ -176,19 +177,36 @@ function ChatMessageBody({
 
   return (
     <div className="space-y-3">
-      {blocks.map((block, index) => {
-        if (block.type === "image") {
-          return <McoImageAttachment key={`${block.payload}-${index}`} payload={block.payload} />;
-        }
+      {blocks.map((line, lineIndex) => {
+        const isBlankLine = line.length === 1 && line[0].type === "text" && line[0].text.length === 0;
 
-        if (block.text.length === 0 && blocks.length > 1) {
-          return <div key={`text-${index}`} className="h-0" aria-hidden="true" />;
+        if (isBlankLine) {
+          return <div key={`line-${lineIndex}`} className="h-6" aria-hidden="true" />;
         }
 
         return (
-          <div key={`text-${index}`} className="break-words whitespace-pre-wrap leading-6 text-gray-800 dark:text-gray-100">
-            {index === 0 && senderPrefix ? senderPrefix : null}
-            <ChatMessageContent text={block.text} />
+          <div
+            key={`line-${lineIndex}`}
+            className="flex flex-wrap items-start gap-2 break-words leading-6 text-gray-800 dark:text-gray-100"
+          >
+            {lineIndex === 0 && senderPrefix ? (
+              <span className="whitespace-pre-wrap">{senderPrefix}</span>
+            ) : null}
+            {line.map((block, blockIndex) => {
+              if (block.type === "image") {
+                return <McoImageAttachment key={`${block.payload}-${lineIndex}-${blockIndex}`} payload={block.payload} />;
+              }
+
+              if (block.text.length === 0) {
+                return null;
+              }
+
+              return (
+                <span key={`text-${lineIndex}-${blockIndex}`} className="whitespace-pre-wrap">
+                  <ChatMessageContent text={block.text} />
+                </span>
+              );
+            })}
           </div>
         );
       })}

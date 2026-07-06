@@ -1,7 +1,7 @@
 const MCOIMG_SCRIPT_URLS = [
-  "https://hdden.ru/MCOimg/mcoimg-codec.global.js",
-  "https://hdden.ru/MCOimg/mcoimg-v3-codec.global.js",
-  "https://hdden.ru/MCOimg/mcoimg-browser.global.js",
+  "/mcoimg/mcoimg-codec.global.js",
+  "/mcoimg/mcoimg-v3-codec.global.js",
+  "/mcoimg/mcoimg-browser.global.js",
 ] as const;
 
 type PayloadOutput = "text" | "binary" | "png" | "image" | "encoded";
