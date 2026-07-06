@@ -6,6 +6,7 @@ const MCOIMG_SCRIPT_URLS = [
 
 type PayloadOutput = "text" | "binary" | "png" | "image" | "encoded";
 type PayloadInput = "auto" | "text" | "binary" | "png";
+type PayloadFormatVersion = 1 | 2 | 3 | "v1" | "v2" | "v3";
 
 export interface McoImgChannelPacketInfo {
   senderName?: string;
@@ -22,9 +23,27 @@ export interface McoImgInspectResult {
 export interface McoImgBrowserRuntime {
   convertPayload(
     payload: string | Uint8Array,
-    options?: { output?: PayloadOutput; input?: PayloadInput },
+    options?: {
+      output?: PayloadOutput;
+      input?: PayloadInput;
+      formatVersion?: PayloadFormatVersion;
+      encodingVersion?: PayloadFormatVersion;
+    },
   ): Promise<Uint8Array> | Uint8Array;
-  inspectPayload(payload: string | Uint8Array): McoImgInspectResult | null;
+  payloadToText?(
+    payload: string | Uint8Array,
+    options?: {
+      formatVersion?: PayloadFormatVersion;
+      encodingVersion?: PayloadFormatVersion;
+    },
+  ): string;
+  inspectPayload(
+    payload: string | Uint8Array,
+    options?: {
+      formatVersion?: PayloadFormatVersion;
+      encodingVersion?: PayloadFormatVersion;
+    },
+  ): McoImgInspectResult | null;
   inspectMcoImageChannelPacket?(
     packetBytes: Uint8Array,
     options?: {
@@ -36,6 +55,17 @@ export interface McoImgBrowserRuntime {
       validate?: boolean;
     },
   ): McoImgChannelPacketInfo;
+  extractMcoImagePayload?(
+    packetBytes: Uint8Array,
+    options?: {
+      layout?: "auto" | "channelData" | "outgoingCommand" | "envelope" | "rawMcoImage";
+      byteOrder?: "auto" | "little" | "big";
+      dataType?: number;
+      formatVersion?: PayloadFormatVersion;
+      encodingVersion?: PayloadFormatVersion;
+      validate?: boolean;
+    },
+  ): Uint8Array;
   drawPngBytesToCanvas?(
     pngBytes: Uint8Array,
     targetCanvas: HTMLCanvasElement,

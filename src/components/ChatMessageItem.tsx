@@ -280,7 +280,10 @@ function ChatMessageItem({ msg, showErrorRow, variant = "default" }: ChatMessage
   const isChannelVariant = variant === "channel";
 
   if (parsed?.kind === "text") {
-    const messageTimestamp = new Date(parsed.timestamp * 1000).toISOString();
+    const timestampSource = parsed.timestamp > 0
+      ? new Date(parsed.timestamp * 1000).toISOString()
+      : (msg.mesh_timestamp || msg.ingest_timestamp);
+    const messageTimestamp = timestampSource;
     const senderLabel = parsed.sender || msg.channel_hash;
 
     return (
@@ -391,6 +394,42 @@ function ChatMessageItem({ msg, showErrorRow, variant = "default" }: ChatMessage
   }
 
   if (error) {
+    if (msg.payload_type === 6) {
+      return (
+        <article className={isChannelVariant ? "group flex gap-3 rounded-[26px] px-1 py-2" : "border-b border-amber-200 pb-2 mb-2 bg-amber-50/70 dark:border-amber-900/70 dark:bg-amber-950/20"}>
+          <div className="min-w-0 flex-1">
+            <div className={isChannelVariant ? "mb-2 flex flex-wrap items-center gap-x-2 gap-y-1" : "text-xs text-gray-400 flex items-center gap-2"}>
+              <span className={isChannelVariant ? "font-semibold text-gray-900 dark:text-white" : ""}>{msg.channel_hash}</span>
+              <span className={isChannelVariant ? "text-xs text-gray-500 dark:text-gray-400" : "text-xs text-gray-500 ml-2"}>
+                {isChannelVariant ? formatTimeOnly(msg.ingest_timestamp, locale) : formatLocalTime(msg.ingest_timestamp)}
+              </span>
+              {!isChannelVariant && <span className="text-xs text-gray-500 ml-2">GRP_DATA</span>}
+              {!isChannelVariant && <span className="text-xs text-gray-500 ml-2">{t("chatMessage.channel")}: {msg.channel_hash}</span>}
+              {detectedRegion && (
+                <span className="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 ring-1 ring-inset ring-indigo-200 dark:ring-indigo-700">
+                  {detectedRegion}
+                </span>
+              )}
+            </div>
+            <div className={isChannelVariant ? "rounded-[24px] rounded-tl-md border border-amber-200/80 bg-amber-50/95 p-4 shadow-sm dark:border-amber-900/70 dark:bg-amber-950/40" : ""}>
+              <div className="text-sm text-gray-800 dark:text-gray-100">Binary channel message</div>
+              <div className="mt-1 text-xs text-amber-700 dark:text-amber-300">{error}</div>
+              <div className="mt-3 break-all font-mono text-[11px] text-gray-500 dark:text-gray-400">{formatHex(msg.encrypted_message)}</div>
+              <div className={isChannelVariant ? "mt-3 border-t border-amber-100 pt-3 dark:border-amber-900/50" : "mt-3"}>
+                <PathVisualization 
+                  paths={pathData} 
+                  title={t("chatMessage.heardRepeats", { count: pathData.length })}
+                  className="text-xs"
+                  packetHash={msg.message_id}
+                  channelHash={msg.channel_hash}
+                />
+              </div>
+            </div>
+          </div>
+        </article>
+      );
+    }
+
     if (showErrorRow) {
       return (
         <article className={isChannelVariant ? "group flex gap-3 rounded-[26px] px-1 py-2" : "border-b border-red-200 pb-2 mb-2 bg-red-50 dark:border-red-800 dark:bg-red-900/30"}>

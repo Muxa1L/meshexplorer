@@ -13,6 +13,11 @@ interface ImageSize {
   height: number;
 }
 
+interface DecodeFailure {
+  message: string;
+  fallbackToText: boolean;
+}
+
 function preferredDisplayWidth(size: ImageSize | null): number {
   if (!size) {
     return 160;
@@ -25,14 +30,14 @@ export default function McoImageAttachment({ payload, input = "auto" }: McoImage
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [size, setSize] = useState<ImageSize | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
+  const [decodeFailure, setDecodeFailure] = useState<DecodeFailure | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     async function decodeAndDraw(): Promise<void> {
       setIsLoading(true);
-      setHasError(false);
+      setDecodeFailure(null);
       setSize(null);
 
       try {
@@ -59,9 +64,12 @@ export default function McoImageAttachment({ payload, input = "auto" }: McoImage
           });
           setIsLoading(false);
         }
-      } catch {
+      } catch (error) {
         if (!cancelled) {
-          setHasError(true);
+          setDecodeFailure({
+            message: error instanceof Error ? error.message : "Unknown image decode error",
+            fallbackToText: typeof payload === "string" && input !== "binary" && input !== "png",
+          });
           setIsLoading(false);
         }
       }
@@ -74,10 +82,15 @@ export default function McoImageAttachment({ payload, input = "auto" }: McoImage
     };
   }, [input, payload]);
 
-  if (hasError) {
+  if (decodeFailure?.fallbackToText && typeof payload === "string") {
+    return <span className="whitespace-pre-wrap break-all">{payload}</span>;
+  }
+
+  if (decodeFailure) {
     return (
       <div className="rounded-2xl border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
         <div className="font-medium">Image decode failed</div>
+        <div className="mt-1 opacity-80">{decodeFailure.message}</div>
         <div className="mt-1 break-all font-mono text-[11px] opacity-80">
           {typeof payload === "string" ? payload : `${payload.length} bytes`}
         </div>

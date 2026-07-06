@@ -280,8 +280,8 @@ export function createChatMessagesStreamerConfig(
           count(*) AS message_count,
           groupArray(tuple(origin, hex(origin_pubkey), hex(path), path_len, broker, topic)) AS origin_path_info,
           anyIf(reinterpretAsUInt16(substring(packet, 2, 2)), route_type IN (0, 3)) AS transport_code
-        FROM meshcore_packets
-        WHERE payload_type IN (5, 6)
+        FROM meshcore_packets AS packets
+        WHERE packets.payload_type IN (5, 6)
         GROUP BY message_hash
       )
       WHERE ingest_timestamp > {lastTimestamp:DateTime64}

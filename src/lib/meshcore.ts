@@ -96,11 +96,13 @@ export function getChannelIdFromKey(key: string): string {
 async function hmacSha256(key: Uint8Array, data: Uint8Array): Promise<Uint8Array> {
   // Check if we're in a browser environment
   if (typeof window !== 'undefined' && window.crypto?.subtle) {
+    const keyBuffer = key.buffer.slice(key.byteOffset, key.byteOffset + key.byteLength) as ArrayBuffer;
+    const dataBuffer = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
     // Use WebCrypto API in browser
     const cryptoKey = await window.crypto.subtle.importKey(
-      "raw", key, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+      "raw", keyBuffer, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
     );
-    const sig = await window.crypto.subtle.sign("HMAC", cryptoKey, data);
+    const sig = await window.crypto.subtle.sign("HMAC", cryptoKey, dataBuffer);
     return new Uint8Array(sig);
   } else {
     // Use Node.js crypto in server environment
@@ -144,22 +146,89 @@ export function parseMeshcoreGroupMessage(decrypted: Uint8Array | string): {
   return { timestamp, msgType, sender, text, rawText };
 }
 
-export async function decryptMeshcoreGroupPayload({
+interface MeshcoreDecryptFailure {
+  key: string;
+  reason: string;
+}
+
+interface MeshcoreDecryptAttemptResult {
+  payload: Uint8Array | null;
+  payloadCandidates: Uint8Array[];
+  failures: MeshcoreDecryptFailure[];
+}
+
+function meshcorePayloadsEqual(left: Uint8Array, right: Uint8Array): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function pushUniqueMeshcorePayload(target: Uint8Array[], payload: Uint8Array): void {
+  if (target.some((existing) => meshcorePayloadsEqual(existing, payload))) {
+    return;
+  }
+
+  target.push(payload);
+}
+
+async function tryDecryptWithMeshcoreKey({
+  ciphertext,
+  macBytes,
+  keyBytes,
+  trimTrailingZeros,
+}: {
+  ciphertext: Uint8Array,
+  macBytes: Uint8Array,
+  keyBytes: Uint8Array,
+  trimTrailingZeros: boolean,
+}): Promise<{ payload: Uint8Array | null; failureReason: string | null }> {
+  let hmac: Uint8Array;
+  try {
+    hmac = await hmacSha256(keyBytes, ciphertext);
+  } catch (e) {
+    return { payload: null, failureReason: `HMAC error: ${e}` };
+  }
+
+  if (macBytes.length !== 2 || hmac[0] !== macBytes[0] || hmac[1] !== macBytes[1]) {
+    return {
+      payload: null,
+      failureReason: `MAC mismatch (expected ${Array.from(macBytes).map(b=>b.toString(16).padStart(2,'0')).join('')}, got ${Array.from(hmac.slice(0,2)).map(b=>b.toString(16).padStart(2,'0')).join('')})`,
+    };
+  }
+
+  try {
+    const aesEcb = new aesjs.ModeOfOperation.ecb(keyBytes);
+    const decrypted = aesEcb.decrypt(ciphertext);
+    if (!trimTrailingZeros) {
+      return { payload: decrypted, failureReason: null };
+    }
+
+    let end = decrypted.length;
+    while (end > 0 && decrypted[end - 1] === 0) end--;
+    return { payload: decrypted.slice(0, end), failureReason: null };
+  } catch (e) {
+    return { payload: null, failureReason: `AES decryption error: ${e}` };
+  }
+}
+
+async function attemptMeshcoreGroupPayloadDecrypt({
   encrypted_message,
   mac,
   channel_hash,
   knownKeys,
+  trimTrailingZeros,
 }: {
   encrypted_message: string | Uint8Array,
   mac: string | Uint8Array,
   channel_hash: string,
   knownKeys: string[],
-}): Promise<Uint8Array | null> {
+  trimTrailingZeros: boolean,
+}): Promise<MeshcoreDecryptAttemptResult> {
   const ciphertext = typeof encrypted_message === "string" ? hexToBytes(encrypted_message) : encrypted_message;
   const macBytes = typeof mac === "string" ? hexToBytes(mac) : mac;
   const chash = channel_hash.toLowerCase();
 
-  const failures: { key: string, reason: string }[] = [];
+  const failures: MeshcoreDecryptFailure[] = [];
+  const payloadCandidates: Uint8Array[] = [];
+  const decodedKeys: Array<{ source: string; base64Key: string; keyBytes: Uint8Array }> = [];
 
   for (const base64Key of knownKeys) {
     let keyBytes: Uint8Array;
@@ -170,46 +239,161 @@ export async function decryptMeshcoreGroupPayload({
       failures.push({ key: base64Key, reason: `base64 decode error: ${e}` });
       continue;
     }
+    decodedKeys.push({ source: 'configured', base64Key, keyBytes });
+
     const candidateHash = getChannelIdFromKey(base64Key);
     if (candidateHash !== chash) {
       failures.push({ key: base64Key, reason: `channel hash mismatch (expected ${chash}, got ${candidateHash})` });
       continue;
     }
 
-    let hmac;
-    try {
-      hmac = await hmacSha256(keyBytes, ciphertext);
-    } catch (e) {
-      failures.push({ key: base64Key, reason: `HMAC error: ${e}` });
-      continue;
+    const attempt = await tryDecryptWithMeshcoreKey({
+      ciphertext,
+      macBytes,
+      keyBytes,
+      trimTrailingZeros,
+    });
+    if (attempt.payload) {
+      pushUniqueMeshcorePayload(payloadCandidates, attempt.payload);
     }
-    if (macBytes.length !== 2 || hmac[0] !== macBytes[0] || hmac[1] !== macBytes[1]) {
-      failures.push({ key: base64Key, reason: `MAC mismatch (expected ${Array.from(macBytes).map(b=>b.toString(16).padStart(2,'0')).join('')}, got ${Array.from(hmac.slice(0,2)).map(b=>b.toString(16).padStart(2,'0')).join('')})` });
-      continue;
-    }
-
-    try {
-      const aesEcb = new aesjs.ModeOfOperation.ecb(keyBytes);
-      const decrypted = aesEcb.decrypt(ciphertext);
-      let end = decrypted.length;
-      while (end > 0 && decrypted[end - 1] === 0) end--;
-      return decrypted.slice(0, end);
-    } catch (e) {
-      failures.push({ key: base64Key, reason: `AES decryption error: ${e}` });
-      continue;
+    if (attempt.failureReason) {
+      failures.push({ key: base64Key, reason: attempt.failureReason });
     }
   }
 
+  // Fallback: if the stored channel hash is wrong or inconsistent for a packet,
+  // still try all configured keys against the MAC before giving up.
+  for (const { base64Key, keyBytes } of decodedKeys) {
+    const alreadyTried = failures.some((failure) => failure.key === base64Key && !failure.reason.startsWith('channel hash mismatch'));
+    if (alreadyTried) {
+      continue;
+    }
+
+    const attempt = await tryDecryptWithMeshcoreKey({
+      ciphertext,
+      macBytes,
+      keyBytes,
+      trimTrailingZeros,
+    });
+    if (attempt.payload) {
+      pushUniqueMeshcorePayload(payloadCandidates, attempt.payload);
+    }
+  }
+
+  return {
+    payload: payloadCandidates[0] ?? null,
+    payloadCandidates,
+    failures,
+  };
+}
+
+export function explainMeshcoreGroupDecryptFailure(channel_hash: string, failures: MeshcoreDecryptFailure[]): string {
+  const normalizedChannelHash = channel_hash.toLowerCase();
+  const hashMismatches = failures.filter((failure) => failure.reason.startsWith("channel hash mismatch"));
+  const matchedChannelFailures = failures.filter((failure) => !failure.reason.startsWith("channel hash mismatch"));
+
+  if (failures.length === 0) {
+    return `No known MeshCore keys are configured for channel ${normalizedChannelHash.toUpperCase()}.`;
+  }
+
+  if (matchedChannelFailures.length === 0 && hashMismatches.length > 0) {
+    return `No configured MeshCore key matches channel ${normalizedChannelHash.toUpperCase()}.`;
+  }
+
+  if (matchedChannelFailures.some((failure) => failure.reason.startsWith("MAC mismatch"))) {
+    return `A configured key matches channel ${normalizedChannelHash.toUpperCase()}, but the packet MAC does not validate.`;
+  }
+
+  return `Could not decrypt channel ${normalizedChannelHash.toUpperCase()} with the configured MeshCore keys.`;
+}
+
+export async function diagnoseMeshcoreGroupDecryptFailure({
+  encrypted_message,
+  mac,
+  channel_hash,
+  knownKeys,
+}: {
+  encrypted_message: string | Uint8Array,
+  mac: string | Uint8Array,
+  channel_hash: string,
+  knownKeys: string[],
+}): Promise<string> {
+  const { failures } = await attemptMeshcoreGroupPayloadDecrypt({
+    encrypted_message,
+    mac,
+    channel_hash,
+    knownKeys,
+    trimTrailingZeros: false,
+  });
+
+  return explainMeshcoreGroupDecryptFailure(channel_hash, failures);
+}
+
+export async function decryptMeshcoreGroupPayloadCandidates({
+  encrypted_message,
+  mac,
+  channel_hash,
+  knownKeys,
+  trimTrailingZeros = true,
+}: {
+  encrypted_message: string | Uint8Array,
+  mac: string | Uint8Array,
+  channel_hash: string,
+  knownKeys: string[],
+  trimTrailingZeros?: boolean,
+}): Promise<Uint8Array[]> {
+  const { payloadCandidates, failures } = await attemptMeshcoreGroupPayloadDecrypt({
+    encrypted_message,
+    mac,
+    channel_hash,
+    knownKeys,
+    trimTrailingZeros,
+  });
+
   if (failures.length > 0) {
     console.info("Meshcore decryption failed for payload", {
-      channel_hash: chash,
-      mac: Array.from(macBytes).map(b=>b.toString(16).padStart(2,'0')).join(''),
+      channel_hash: channel_hash.toLowerCase(),
+      mac: typeof mac === "string" ? mac.toLowerCase() : Array.from(mac).map(b=>b.toString(16).padStart(2,'0')).join(''),
+      knownKeysTried: knownKeys,
+      failures,
+      matchedPayloadCandidates: payloadCandidates.length,
+    });
+  }
+
+  return payloadCandidates;
+}
+
+export async function decryptMeshcoreGroupPayload({
+  encrypted_message,
+  mac,
+  channel_hash,
+  knownKeys,
+  trimTrailingZeros = true,
+}: {
+  encrypted_message: string | Uint8Array,
+  mac: string | Uint8Array,
+  channel_hash: string,
+  knownKeys: string[],
+  trimTrailingZeros?: boolean,
+}): Promise<Uint8Array | null> {
+  const { payload, failures } = await attemptMeshcoreGroupPayloadDecrypt({
+    encrypted_message,
+    mac,
+    channel_hash,
+    knownKeys,
+    trimTrailingZeros,
+  });
+
+  if (failures.length > 0) {
+    console.info("Meshcore decryption failed for payload", {
+      channel_hash: channel_hash.toLowerCase(),
+      mac: typeof mac === "string" ? mac.toLowerCase() : Array.from(mac).map(b=>b.toString(16).padStart(2,'0')).join(''),
       knownKeysTried: knownKeys,
       failures,
     });
   }
 
-  return null;
+  return payload;
 }
 
 // Main decryption function
@@ -231,6 +415,7 @@ export async function decryptMeshcoreGroupMessage({
     mac,
     channel_hash,
     knownKeys,
+    trimTrailingZeros: true,
   });
 
   if (plainBytes === null) {
