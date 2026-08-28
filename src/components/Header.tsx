@@ -59,7 +59,7 @@ export default function Header({ configButtonRef }: HeaderProps) {
     // Define all navigation items
     const allNavItems: NavItem[] = [
       { href: "/join", label: t("header.howToJoin") },
-      { href: "/messages", label: t("header.messages") },
+      // { href: "/messages", label: t("header.messages") }, // TEMPORARILY_DISABLED
       { href: "/map", label: t("header.map") },
       { href: "/packets", label: t("header.packets") },
       { href: "/stats", label: t("header.stats") },

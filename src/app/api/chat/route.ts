@@ -3,6 +3,9 @@ import { getLatestChatMessages } from "@/lib/clickhouse/actions";
 import { getChannelIdFromKey, decryptMeshcoreGroupMessage } from "@/lib/meshcore";
 
 export async function GET(req: Request) {
+  // TEMPORARILY_DISABLED: chat history API is turned off. Delete this block to re-enable.
+  return NextResponse.json({ error: "Chat API temporarily disabled" }, { status: 503 });
+
   try {
     const { searchParams } = new URL(req.url);
     const limit = parseInt(searchParams.get("limit") || "20", 10);
