@@ -4,22 +4,25 @@ import { subscribeToStream } from '@/lib/clickhouse/stream-cache';
 import { decryptMeshcoreGroupMessage } from '@/lib/meshcore';
 
 export async function GET(req: NextRequest) {
-  // TEMPORARILY_DISABLED: chat stream API is turned off. Delete this block to re-enable.
-  const encoder = new TextEncoder();
-  const disabledPayload = encoder.encode(
-    `event: error\ndata: ${JSON.stringify({ type: "error", message: "Chat stream temporarily disabled", timestamp: new Date().toISOString() })}\n\n`,
-  );
-  return new Response(disabledPayload, {
-    status: 503,
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      "Connection": "keep-alive",
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Headers": "Cache-Control",
-      "Access-Control-Allow-Methods": "GET",
-    },
-  });
+  // TEMPORARILY_DISABLED: chat stream API is turned off. To re-enable, delete this block.
+  // (Kept behind a flag so the original implementation below stays reachable for type-checking.)
+  const TEMPORARILY_DISABLED = true;
+  if (TEMPORARILY_DISABLED) {
+    const disabledPayload = new TextEncoder().encode(
+      `event: error\ndata: ${JSON.stringify({ type: "error", message: "Chat stream temporarily disabled", timestamp: new Date().toISOString() })}\n\n`,
+    );
+    return new Response(disabledPayload, {
+      status: 503,
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Cache-Control",
+        "Access-Control-Allow-Methods": "GET",
+      },
+    });
+  }
 
   const { searchParams } = new URL(req.url);
   
