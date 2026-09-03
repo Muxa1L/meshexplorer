@@ -529,5 +529,29 @@ ALTER TABLE meshcore_adverts MODIFY COMMENT 'Parsed node advertisements with loc
 --    - Adjust index_granularity based on query patterns
 
 -- ============================================================================
+-- AUTHENTICATION
+-- ============================================================================
+
+-- Registered application accounts with pre-moderation.
+-- status: 'pending' (awaiting moderator approval), 'approved' (can sign in), 'rejected' (declined)
+-- role: 'user' or 'admin' (admins can moderate registrations)
+-- Updates are performed by inserting a replacement row with the same email;
+-- ReplacingMergeTree(updated_at) keeps the newest version and reads use FINAL.
+-- The application also creates this table automatically on first use.
+CREATE TABLE IF NOT EXISTS users (
+    id UUID,
+    email String,
+    display_name String,
+    password_hash String,                    -- scrypt:<salt-hex>:<hash-hex>
+    status Enum8('pending' = 1, 'approved' = 2, 'rejected' = 3),
+    role Enum8('user' = 1, 'admin' = 2),
+    created_at DateTime64(3, 'UTC') DEFAULT now64(3, 'UTC'),
+    updated_at DateTime64(3, 'UTC') DEFAULT now64(3, 'UTC'),
+    approved_at Nullable(DateTime64(3, 'UTC'))
+)
+ENGINE = ReplacingMergeTree(updated_at)
+ORDER BY email;
+
+-- ============================================================================
 -- END OF SCHEMA
 -- ============================================================================

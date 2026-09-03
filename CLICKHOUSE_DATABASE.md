@@ -161,6 +161,33 @@ ORDER BY (channel_hash, ingest_timestamp);
 
 ---
 
+### 4. users
+
+**Purpose**: Stores registered application accounts for authentication with pre-moderation.
+
+**Schema**:
+```sql
+CREATE TABLE users (
+    id UUID,                                       -- User identifier
+    email String,                                  -- Login email (lowercase, unique)
+    display_name String,                            -- Display name
+    password_hash String,                          -- scrypt:<salt-hex>:<hash-hex>
+    status Enum8('pending' = 1, 'approved' = 2, 'rejected' = 3),  -- Moderation status
+    role Enum8('user' = 1, 'admin' = 2),           -- Admins can moderate registrations
+    created_at DateTime64(3, 'UTC') DEFAULT now64(3, 'UTC'),
+    updated_at DateTime64(3, 'UTC') DEFAULT now64(3, 'UTC'),     -- ReplacingMergeTree version
+    approved_at Nullable(DateTime64(3, 'UTC'))     -- Set when approved
+) ENGINE = ReplacingMergeTree(updated_at)
+ORDER BY email;
+```
+
+**Notes**:
+- New registrations are stored with `status = 'pending'`; only `'approved'` users can sign in.
+- The **first** registered user is automatically approved with the `'admin'` role (bootstrap).
+- Updates (approve/decline/role change) insert a replacement row with the same email; `ReplacingMergeTree(updated_at)` keeps the newest version.
+- Always read with `FINAL`, e.g. `SELECT * FROM users FINAL WHERE email = 'user@example.com'`.
+- The Next.js app creates this table automatically on first use (`CREATE TABLE IF NOT EXISTS`).
+
 ## Materialized Views
 
 Materialized views automatically maintain aggregated data for faster queries.

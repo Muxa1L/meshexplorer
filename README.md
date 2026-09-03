@@ -67,6 +67,24 @@ The middleware applies the following CORS headers to all `/api/*` routes:
 - `Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With`
 - `Access-Control-Allow-Credentials: true`
 
+## Authentication
+
+MeshExplorer requires a signed-in session for **all pages**. Registration is pre-moderated:
+
+1. A user registers at `/register` — the account is created with `pending` status.
+2. An administrator approves or declines the registration at `/admin/users`.
+3. Only approved users can sign in at `/login`; everyone else is redirected there by middleware.
+
+The **first registered user** is automatically approved with administrator rights, so a fresh instance is never locked out.
+
+Sessions are HMAC-SHA256 signed, HttpOnly cookies (`SameSite=Lax`, 7 day expiry). Accounts and password hashes (scrypt) are stored in the ClickHouse `users` table (see [CLICKHOUSE_DATABASE.md](CLICKHOUSE_DATABASE.md)); the table is created automatically on first use.
+
+Environment variables:
+
+- `AUTH_SECRET` — secret used to sign session cookies. **Set this in production** to a long random string (e.g. `openssl rand -hex 32`). If unset, an insecure development fallback is used and a warning is logged.
+
+Middleware (`src/middleware.ts`) redirects unauthenticated page requests to `/login` (only `/login` and `/register` stay public). The existing `/api/*` data routes keep their public CORS behaviour; the auth API (`/api/auth/*`) enforces its own session/admin checks.
+
 ## Learn More
 
 - [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.

@@ -101,6 +101,9 @@ CLICKHOUSE_PORT=8123
 CLICKHOUSE_USER=default
 CLICKHOUSE_PASSWORD=password
 
+# Authentication (session cookie signing secret — required in production)
+AUTH_SECRET=change-me-to-a-long-random-string
+
 # Optional: point frontend at a remote API instead of local routes
 NEXT_PUBLIC_API_URL=https://map.w0z.is
 

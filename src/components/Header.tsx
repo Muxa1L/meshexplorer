@@ -1,12 +1,13 @@
 "use client";
 import Link from "next/link";
-import { Cog6ToothIcon, InformationCircleIcon, ChevronDownIcon, SunIcon, MoonIcon, ComputerDesktopIcon, EllipsisHorizontalIcon } from "@heroicons/react/24/outline";
+import { Cog6ToothIcon, InformationCircleIcon, ChevronDownIcon, SunIcon, MoonIcon, ComputerDesktopIcon, EllipsisHorizontalIcon, ArrowRightOnRectangleIcon } from "@heroicons/react/24/outline";
 import { useConfig } from "./ConfigContext";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import InfoModal from "./InfoModal";
 import { useLocale } from "./LocaleProvider";
 import { getAppName } from "@/lib/api";
 import { useTheme } from "./ThemeProvider";
+import { useAuth } from "./AuthProvider";
 
 interface HeaderProps {
   configButtonRef?: React.Ref<HTMLButtonElement>;
@@ -35,6 +36,7 @@ const THEME_LABEL = {
 
 export default function Header({ configButtonRef }: HeaderProps) {
   const { openConfig, configButtonRef: contextButtonRef } = useConfig();
+  const { user: authUser, logout } = useAuth();
   const { theme, setTheme } = useTheme();
   const { locale, setLocale, t } = useLocale();
   const [infoModalOpen, setInfoModalOpen] = useState(false);
@@ -69,6 +71,9 @@ export default function Header({ configButtonRef }: HeaderProps) {
       // { href: "/wardrive", label: "Wardrive" },
       // { href: "/coverage", label: "Coverage" },
     ];
+    if (authUser?.role === "admin") {
+      allNavItems.push({ href: "/admin/users", label: t("auth.users") });
+    }
     if (!navRef.current || !itemsRef.current) return;
 
     const headerWidth = headerRef.current?.offsetWidth ?? window.innerWidth;
@@ -125,7 +130,7 @@ export default function Header({ configButtonRef }: HeaderProps) {
 
     setVisibleItems(visible);
     setHiddenItems(hidden);
-  }, [t]);
+  }, [t, authUser?.role]);
 
   const themeLabel = THEME_LABEL[theme] === "Light"
     ? t("header.themeLight")
@@ -252,6 +257,25 @@ export default function Header({ configButtonRef }: HeaderProps) {
               <Cog6ToothIcon className="h-6 w-6" />
               <span className="hidden sm:inline">{t("common.settings")}</span>
             </button>
+          )}
+          {authUser && (
+            <div className="flex items-center gap-1.5">
+              <span
+                className="hidden max-w-40 truncate px-1 text-sm text-gray-600 dark:text-gray-300 lg:inline"
+                title={authUser.email}
+              >
+                {authUser.displayName || authUser.email}
+              </span>
+              <button
+                onClick={() => { void logout(); }}
+                className="flex items-center gap-2 rounded px-3 py-2 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                aria-label={t("auth.logout")}
+                title={t("auth.logout")}
+              >
+                <ArrowRightOnRectangleIcon className="h-6 w-6" />
+                <span className="hidden sm:inline">{t("auth.logout")}</span>
+              </button>
+            </div>
           )}
           {hasHiddenActions && (
             <div className="relative" ref={actionsDropdownRef}>
